@@ -1,0 +1,12 @@
+services:
+  voicevox:
+    image: voicevox/voicevox_engine:cpu-ubuntu20.04-latest
+
+  web:
+    build: .
+    tty: true
+    volumes:
+      - .:/usr/src/myapp
+    command: /bin/sh -c 'cargo run'
+    environment:
+      - CARGO_BUILD_TARGET_DIR=/usr/src/target

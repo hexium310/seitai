@@ -1,0 +1,23 @@
+[package]
+name = "voicevox-discord"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity.git"
+branch = "next"
+default-features = false
+features = ["builder", "cache", "client", "collector", "gateway", "model", "native_tls_backend"]
+
+[dependencies.songbird]
+git = "https://github.com/serenity-rs/songbird.git"
+branch = "next"
+features = ["builtin-queue"]
+
+[dependencies.symphonia]
+version = "0.5.2"
+features = ["wav"]
+
+[dependencies]
+anyhow = "1.0.71"
+tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread", "net"] }
