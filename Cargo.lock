@@ -2406,10 +2406,12 @@ name = "voicevox-discord"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hyper",
  "serenity",
  "songbird",
  "symphonia",
  "tokio",
+ "url",
 ]
 
 [[package]]

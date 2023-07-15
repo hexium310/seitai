@@ -6,6 +6,7 @@ use songbird::SerenityInit;
 mod commands;
 mod event_handler;
 mod utils;
+mod voicevox;
 
 pub struct Data {}
 

@@ -4,10 +4,7 @@ use anyhow::{Context as _, Result};
 use serenity::{
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
     client::Context,
-    model::{
-        guild::Guild,
-        application::CommandInteraction,
-    },
+    model::{application::CommandInteraction, guild::Guild},
 };
 use songbird::Songbird;
 
@@ -22,7 +19,11 @@ pub(crate) fn get_guild(context: &Context, interaction: &CommandInteraction) -> 
     guild_id.to_guild_cached(&context.cache).map(|guild| guild.to_owned())
 }
 
-pub(crate) async fn respond(context: &Context, interaction: &CommandInteraction, message: CreateInteractionResponseMessage) -> Result<()> {
+pub(crate) async fn respond(
+    context: &Context,
+    interaction: &CommandInteraction,
+    message: CreateInteractionResponseMessage,
+) -> Result<()> {
     let builder = CreateInteractionResponse::Message(message);
     interaction.create_response(&context.http, builder).await?;
 
