@@ -31,8 +31,6 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, context: Context, message: Message) {
-        println!("Message: {:#?}", message.content);
-
         if message.author.bot {
             return;
         }
