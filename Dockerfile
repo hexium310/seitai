@@ -19,6 +19,7 @@ RUN --mount=type=cache,target=/usr/src/myapp/target \
     && cp target/release/seitai /seitai
 
 FROM scratch
+LABEL org.opencontainers.image.source=https://github.com/hexium310/seitai
 COPY --from=runtime /etc/ssl/certs/ /etc/ssl/certs/
 COPY --from=runtime /lib/x86_64-linux-gnu/libc.so* /lib/x86_64-linux-gnu/
 COPY --from=runtime /lib/x86_64-linux-gnu/libcrypto.so* /lib/x86_64-linux-gnu/
