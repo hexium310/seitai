@@ -16,7 +16,7 @@ WORKDIR /usr/src/myapp
 COPY . .
 RUN --mount=type=cache,target=/usr/src/myapp/target \
     cargo build --release \
-    && cp target/release/voicevox-discord /voicevox-discord
+    && cp target/release/seitai /seitai
 
 FROM scratch
 COPY --from=runtime /etc/ssl/certs/ /etc/ssl/certs/
@@ -27,5 +27,5 @@ COPY --from=runtime /lib/x86_64-linux-gnu/libm.so* /lib/x86_64-linux-gnu/
 COPY --from=runtime /lib/x86_64-linux-gnu/libopus.so* /lib/x86_64-linux-gnu/
 COPY --from=runtime /lib/x86_64-linux-gnu/libssl.so* /lib/x86_64-linux-gnu/
 COPY --from=runtime /lib64/ld-linux-x86-64.so* /lib64/
-COPY --from=builder /voicevox-discord /
-CMD ["/voicevox-discord"]
+COPY --from=builder /seitai /
+CMD ["/seitai"]
