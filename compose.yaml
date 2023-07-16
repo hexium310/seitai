@@ -20,3 +20,4 @@ services:
     command: /bin/sh -c 'cargo run'
     environment:
       - DISCORD_TOKEN
+      - VOICEVOX_HOST=voicevox
