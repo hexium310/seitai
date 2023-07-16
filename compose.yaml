@@ -3,10 +3,20 @@ services:
     image: voicevox/voicevox_engine:cpu-ubuntu20.04-latest
 
   web:
-    build: .
+    build:
+      context: .
+      target: development
     tty: true
     volumes:
-      - .:/usr/src/myapp
+      - type: bind
+        source: Cargo.lock
+        target: /usr/src/myapp/Cargo.lock
+      - type: bind
+        source: Cargo.toml
+        target: /usr/src/myapp/Cargo.toml
+      - type: bind
+        source: src
+        target: /usr/src/myapp/src
     command: /bin/sh -c 'cargo run'
     environment:
-      - CARGO_BUILD_TARGET_DIR=/usr/src/target
+      - DISCORD_TOKEN
