@@ -46,9 +46,9 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
 
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()
+            .title("不具合")
             .description(
-                "現在不具合により、`/join`コマンドを実行した際に`アプリケーションが応答しませんでした`と表示されます。\n".to_string()
-                + "また、接続後メッセージを読み上げるようになるまで数秒のラグがあります。"
+                "bot がボイスチャンネルに接続した後メッセージを読み上げるようになるまで数秒のラグがあります。"
             )
             .colour(Colour::ORANGE),
     );
