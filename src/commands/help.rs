@@ -2,10 +2,7 @@ use anyhow::Result;
 use serenity::{
     builder::{CreateCommand, CreateCommandOption, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
-    model::{
-        application::{CommandInteraction, CommandOptionType},
-        id::GuildId,
-    },
+    model::application::{CommandInteraction, CommandOptionType},
 };
 
 use crate::utils::respond;
@@ -47,15 +44,12 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
     Ok(())
 }
 
-pub async fn register(context: &Context, guild_id: &GuildId) -> Result<CreateCommand> {
-    let commands = guild_id.get_commands(&context.http).await?;
-    let mut channels = CreateCommandOption::new(CommandOptionType::String, "command", "chose command");
+pub fn register() -> CreateCommand {
+    let channels = CreateCommandOption::new(CommandOptionType::String, "command", "chose command")
+        .add_string_choice("join", "join")
+        .add_string_choice("leave", "leave");
 
-    for command in commands.iter() {
-        channels = channels.add_string_choice(&command.name, &command.name);
-    }
-
-    Ok(CreateCommand::new("help")
+    CreateCommand::new("help")
         .description("Specific command to show help about")
-        .set_options(vec![channels]))
+        .set_options(vec![channels])
 }

@@ -64,13 +64,12 @@ impl EventHandler for Handler {
         println!("{} is connected!", ready.user.name);
 
         for guild in ready.guilds {
-            println!("{guild:?}");
             let commands = guild
                 .id
                 .set_commands(
                     &context.http,
                     vec![
-                        commands::help::register(&context, &guild.id).await.unwrap(),
+                        commands::help::register(),
                         commands::join::register(),
                         commands::leave::register(),
                     ],
