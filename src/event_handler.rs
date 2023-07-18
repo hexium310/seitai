@@ -37,7 +37,14 @@ impl EventHandler for Handler {
 
         let guild_id = message.guild_id.unwrap();
         let manager = get_manager(&context).await.unwrap();
-        let call = manager.get_or_insert(guild_id);
+
+        // Returns when the bot is not connected to a voice channel
+        let call = match manager.get(guild_id) {
+            Some(call) => call,
+            None => {
+                return;
+            },
+        };
         let mut call = call.lock().await;
 
         let speaker = "1";
