@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seitai
+spec:
+  selector:
+    matchLabels:
+      app: seitai
+  template:
+    metadata:
+      labels:
+        app: seitai
+    spec:
+      containers:
+        - name: seitai
+          image: ghcr.io/hexium310/seitai:0.1.2
+          env:
+            - name: VOICEVOX_HOST
+              value: voicevox
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: seitai-secret
+                  key: token

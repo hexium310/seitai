@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voicevox
+spec:
+  selector:
+    matchLabels:
+      app: voicevox
+  template:
+    metadata:
+      labels:
+        app: voicevox
+    spec:
+      containers:
+        - name: voicevox
+          image: voicevox/voicevox_engine:cpu-ubuntu20.04-latest
+          ports:
+            - containerPort: 50021
+          resources:
+           limits:
+            http://k8s.chitoku.jp/voicevox: "1"
