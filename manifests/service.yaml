@@ -7,3 +7,4 @@ spec:
     app: voicevox
   ports:
     - port: 50021
+  clusterIP: None
