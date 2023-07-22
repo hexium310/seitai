@@ -15,9 +15,31 @@ services:
         source: Cargo.toml
         target: /usr/src/myapp/Cargo.toml
       - type: bind
-        source: src
-        target: /usr/src/myapp/src
-    command: /bin/sh -c 'cargo run'
+        source: seitai
+        target: /usr/src/myapp/seitai
+      - type: bind
+        source: restarter
+        target: /usr/src/myapp/restarter
+    command: /bin/sh -c 'cargo run -p seitai'
     environment:
       - DISCORD_TOKEN
       - VOICEVOX_HOST=voicevox
+
+  restarter:
+    build:
+      context: .
+      target: development
+    tty: true
+    volumes:
+      - type: bind
+        source: Cargo.lock
+        target: /usr/src/myapp/Cargo.lock
+      - type: bind
+        source: Cargo.toml
+        target: /usr/src/myapp/Cargo.toml
+      - type: bind
+        source: restarter
+        target: /usr/src/myapp/restarter
+    command: /bin/sh -c 'cargo run -p restarter'
+    environment:
+      - DISCORD_TOKEN

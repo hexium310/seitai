@@ -22,3 +22,12 @@ spec:
                 secretKeyRef:
                   name: seitai-secret
                   key: token
+        - name: restarter
+          image: ghcr.io/hexium310/restarter:0.1.0
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: seitai-secret
+                  key: token
+      serviceAccountName: restarter
