@@ -33,10 +33,8 @@ impl EventHandler for Handler {
         if new.user_id == bot_id {
             // When bot joined a voice channel
             if let (Some(channel_id), Some(guild_id)) = (new.channel_id, new.guild_id) {
-                println!("{:#?}", data.cancellation);
                 data.connected_channels.insert(guild_id, channel_id);
                 data.cancellation.notify_one();
-                println!("{:#?}", data.cancellation);
             // When bot left a voice channel
             } else if let (None, Some(guild_id)) = (new.channel_id, new.guild_id) {
                 data.connected_channels.remove(&guild_id);
@@ -63,7 +61,6 @@ async fn wait_restart(context: &Context) {
             data.cancellation.clone()
         };
 
-        println!("waiting start");
         tokio::select! {
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(300)) => {
                 if let Err(why) = restart().await {
