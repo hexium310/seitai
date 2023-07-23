@@ -49,7 +49,7 @@ impl EventHandler for Handler {
         let mut call = call.lock().await;
 
         let speaker = "1";
-        let regex = Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[\w\-\./\?,\#:\u3000-\u30FE\u4E00-\u9FA0\uFF01-\uFFE3]+").unwrap();
+        let regex = Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap();
 
         for text in regex.replace_all(&message.content, "URL").split('\n') {
             let json = match generate_audio_query(speaker, text).await {
