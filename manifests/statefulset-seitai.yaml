@@ -25,9 +25,9 @@ spec:
             - name: VOICEVOX_HOST
               value: voicevox
           volumeMounts:
-            - mountPath: /resources/
+            - mountPath: /apps/resources/
               name: seitai-resources
-              subPath: /resources/
+              subPath: ./resources/
       containers:
         - name: seitai
           image: ghcr.io/hexium310/seitai:0.1.2
@@ -42,7 +42,7 @@ spec:
           volumeMounts:
             - mountPath: /resources/
               name: seitai-resources
-              subPath: /resources/
+              subPath: ./resources/
         - name: restarter
           image: ghcr.io/hexium310/restarter:0.1.0
           env:

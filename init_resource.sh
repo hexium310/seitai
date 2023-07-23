@@ -17,6 +17,6 @@ generate_audio() {
 generate_audio URL url.wav
 echo $(ls ./resources) are available
 
-if [[ -n "$KUBERNETES_SERVICE_HOST" ]] && [[ $voicevox_is_used = 1 ]]; then
+if [[ -n "$KUBERNETES_SERVICE_HOST" ]] && [[ "$voicevox_is_used" = 1 ]]; then
     kubectl rollout restart statefulset voicevox
 fi
