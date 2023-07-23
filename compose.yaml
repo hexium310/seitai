@@ -38,6 +38,9 @@ services:
         source: Cargo.toml
         target: /usr/src/myapp/Cargo.toml
       - type: bind
+        source: seitai
+        target: /usr/src/myapp/seitai
+      - type: bind
         source: restarter
         target: /usr/src/myapp/restarter
     command: /bin/sh -c 'cargo run -p restarter'
