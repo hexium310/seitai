@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use k8s_openapi::api::apps::v1::StatefulSet;
-use kube::{Api, Client};
+use kube::{Api, Client, Config};
 use serenity::{
     all::VoiceState,
     async_trait,
@@ -77,7 +77,13 @@ async fn wait_restart(context: &Context) {
 }
 
 async fn restart() -> Result<()> {
-    let client = Client::try_default().await?;
+    let config = match Config::incluster() {
+        Ok(config) => config,
+        Err(_) => {
+            bail!("This app is not running in cluster of Kubernetes");
+        },
+    };
+    let client = Client::try_from(config)?;
     let stateful_sets: Api<StatefulSet> = Api::default_namespaced(client);
     stateful_sets.restart("voicevox").await?;
 
