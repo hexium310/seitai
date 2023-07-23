@@ -8,7 +8,7 @@ use songbird::input::Input;
 
 use crate::{
     commands,
-    utils::get_manager,
+    utils::{get_manager, get_sound_store},
     voicevox::{generate_audio, generate_audio_query},
 };
 
@@ -51,23 +51,20 @@ impl EventHandler for Handler {
         let speaker = "1";
         let regex = Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap();
 
-        for text in regex.replace_all(&message.content, "URL").split('\n') {
-            let json = match generate_audio_query(speaker, text).await {
-                Ok(json) => json,
-                Err(why) => {
-                    println!("Generating audio query with `{text}` failed because of `{why}`.");
-                    return;
-                },
-            };
-            let audio = match generate_audio(speaker, &json).await {
-                Ok(audio) => audio,
-                Err(why) => {
-                    println!("Generating audio failed because of `{why}`. The audio query used is {json}.");
-                    return;
-                },
-            };
+        for text in regex
+            .split(&message.content)
+            .collect::<Vec<_>>()
+            .join("\n{{seitai::replacement::URL}}\n")
+            .split('\n')
+        {
+            let text = text.trim();
+            if text.is_empty() {
+                continue;
+            }
 
-            call.enqueue_input(Input::from(audio)).await;
+            if let Some(input) = get_audio_source(&context, text, speaker).await {
+                call.enqueue_input(input).await;
+            }
         }
     }
 
@@ -91,5 +88,33 @@ impl EventHandler for Handler {
                 println!("{why}");
             }
         }
+    }
+}
+
+async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Option<Input> {
+    match text {
+        "{{seitai::replacement::URL}}" => {
+            let sound_store = get_sound_store(context).await;
+            let sound_store = sound_store.lock().await;
+            let source = sound_store.get("URL").unwrap();
+            Some(source.new_handle().into())
+        },
+        _ => {
+            let json = match generate_audio_query(speaker, text).await {
+                Ok(json) => json,
+                Err(why) => {
+                    println!("Generating audio query with `{text}` failed because of `{why}`.");
+                    return None;
+                },
+            };
+            let audio = match generate_audio(speaker, &json).await {
+                Ok(audio) => audio,
+                Err(why) => {
+                    println!("Generating audio failed because of `{why}`. The audio query used is {json}.");
+                    return None;
+                },
+            };
+            Some(Input::from(audio))
+        },
     }
 }

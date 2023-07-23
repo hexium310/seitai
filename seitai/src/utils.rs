@@ -1,12 +1,15 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{Context as _, Result};
 use serenity::{
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
     client::Context,
+    futures::lock::Mutex,
     model::{application::CommandInteraction, guild::Guild},
 };
-use songbird::Songbird;
+use songbird::{input::cached::Compressed, Songbird};
+
+use crate::SoundStore;
 
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)
@@ -28,4 +31,9 @@ pub(crate) async fn respond(
     interaction.create_response(&context.http, builder).await?;
 
     Ok(())
+}
+
+pub(crate) async fn get_sound_store(context: &Context) -> Arc<Mutex<HashMap<String, Compressed>>> {
+    let data = context.data.read().await;
+    data.get::<SoundStore>().unwrap().clone()
 }
