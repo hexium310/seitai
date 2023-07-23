@@ -50,23 +50,25 @@ impl EventHandler for Handler {
 
         let speaker = "1";
         let regex = Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[\w\-\./\?,\#:\u3000-\u30FE\u4E00-\u9FA0\uFF01-\uFFE3]+").unwrap();
-        let text = regex.replace_all(&message.content, "URL");
-        let json = match generate_audio_query(speaker, &text).await {
-            Ok(json) => json,
-            Err(why) => {
-                println!("Generating audio query with `{text}` failed because of `{why}`.");
-                return;
-            },
-        };
-        let audio = match generate_audio(speaker, &json).await {
-            Ok(audio) => audio,
-            Err(why) => {
-                println!("Generating audio failed because of `{why}`. The audio query used is {json}.");
-                return;
-            },
-        };
 
-        call.enqueue_input(Input::from(audio)).await;
+        for text in regex.replace_all(&message.content, "URL").split('\n') {
+            let json = match generate_audio_query(speaker, text).await {
+                Ok(json) => json,
+                Err(why) => {
+                    println!("Generating audio query with `{text}` failed because of `{why}`.");
+                    return;
+                },
+            };
+            let audio = match generate_audio(speaker, &json).await {
+                Ok(audio) => audio,
+                Err(why) => {
+                    println!("Generating audio failed because of `{why}`. The audio query used is {json}.");
+                    return;
+                },
+            };
+
+            call.enqueue_input(Input::from(audio)).await;
+        }
     }
 
     async fn ready(&self, context: Context, ready: Ready) {
