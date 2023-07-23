@@ -1,5 +1,6 @@
 Dockerfile
 compose.yaml
+resources
 target
 .dockerignore
 .gitignore

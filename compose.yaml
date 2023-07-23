@@ -20,11 +20,35 @@ services:
       - type: bind
         source: restarter
         target: /usr/src/myapp/restarter
+      - type: bind
+        source: resources
+        target: /usr/src/myapp/resources
+        read_only: true
     command: /bin/sh -c 'cargo run -p seitai'
     environment:
       - DISCORD_TOKEN
       - VOICEVOX_HOST=voicevox
-
+    depends_on:
+      init_resource:
+        condition: service_completed_successfully
+  init_resource:
+    image: curlimages/curl
+    working_dir: /home/curl_user
+    volumes:
+      - type: bind
+        source: init_resource.sh
+        target: /home/curl_user/init_resource.sh
+      - type: bind
+        source: resources/
+        target: /home/curl_user/resources/
+    command:
+      - sh
+      - init_resource.sh
+    environment:
+      - VOICEVOX_HOST=voicevox
+    depends_on:
+      - voicevox
+    restart: on-failure
   restarter:
     build:
       context: .
