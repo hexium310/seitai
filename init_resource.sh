@@ -9,12 +9,14 @@ generate_audio() {
     if [[ ! -e "./resources/$file" ]]; then
         local json
         json=$(curl --silent --request POST --get --data-urlencode "text=$text" "$VOICEVOX_HOST:50021/audio_query?speaker=1")
-        curl --silent --request POST --header 'Content-Type: application/json' --data "$json" "$VOICEVOX_HOST:50021/synthesis?speaker=1" > ./resources/url.wav
+        curl --silent --request POST --header 'Content-Type: application/json' --data "$json" "$VOICEVOX_HOST:50021/synthesis?speaker=1" > "./resources/$file"
         voicevox_is_used=1
     fi
 }
 
+generate_audio 'コード省略' code.wav
 generate_audio URL url.wav
+
 echo $(ls ./resources) are available
 
 if [[ -n "$KUBERNETES_SERVICE_HOST" ]] && [[ "${voicevox_is_used:+defined}" ]]; then

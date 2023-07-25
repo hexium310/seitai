@@ -51,14 +51,8 @@ impl EventHandler for Handler {
         let mut call = call.lock().await;
 
         let speaker = "1";
-        let regex = Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap();
 
-        for text in regex
-            .split(&message.content)
-            .collect::<Vec<_>>()
-            .join("\n{{seitai::replacement::URL}}\n")
-            .split('\n')
-        {
+        for text in replace_message(&message.content).split('\n') {
             let text = text.trim();
             if text.is_empty() {
                 continue;
@@ -95,6 +89,12 @@ impl EventHandler for Handler {
 
 async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Option<Input> {
     match text {
+        "{{seitai::replacement::CODE}}" => {
+            let sound_store = get_sound_store(context).await;
+            let sound_store = sound_store.lock().await;
+            let source = sound_store.get("CODE").unwrap();
+            Some(source.new_handle().into())
+        },
         "{{seitai::replacement::URL}}" => {
             let sound_store = get_sound_store(context).await;
             let sound_store = sound_store.lock().await;
@@ -124,4 +124,15 @@ async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Optio
             Some(Input::from(audio))
         },
     }
+}
+
+fn replace_message(message: &str) -> String {
+        let replacings = vec![
+            (Regex::new(r"(?:`[^`]+`|```[^`]+```)").unwrap(), "{{seitai::replacement::CODE}}"),
+            (Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap(), "{{seitai::replacement::URL}}"),
+        ];
+
+        replacings.iter().fold(message.to_string(), |accumulator, replacing| {
+            replacing.0.split(&accumulator).collect::<Vec<_>>().join(&format!("\n{}\n", replacing.1))
+        })
 }
