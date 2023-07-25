@@ -14,6 +14,8 @@ use crate::{
 
 pub struct Handler;
 
+const DEFAULT_SPEED: f32 = 1.2;
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, context: Context, interaction: Interaction) {
@@ -100,13 +102,18 @@ async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Optio
             Some(source.new_handle().into())
         },
         _ => {
-            let json = match generate_audio_query(speaker, text).await {
-                Ok(json) => json,
+            let mut audio_query = match generate_audio_query(speaker, text).await {
+                Ok(audio_query) => audio_query,
                 Err(why) => {
                     println!("Generating audio query with `{text}` failed because of `{why}`.");
                     return None;
                 },
             };
+
+            // TODO: Truncate message too long
+            audio_query.speed_scale = DEFAULT_SPEED + (text.len() / 50) as f32 * 0.1;
+
+            let json = serde_json::to_string(&audio_query).unwrap();
             let audio = match generate_audio(speaker, &json).await {
                 Ok(audio) => audio,
                 Err(why) => {

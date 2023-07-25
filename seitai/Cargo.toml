@@ -13,8 +13,12 @@ features = ["http1", "client", "runtime"]
 [dependencies.regex-lite]
 version = "0.1.0"
 
-[dependencies.tokio]
-workspace = true
+[dependencies.serde]
+version = "1.0.175"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0.103"
 
 [dependencies.serenity]
 workspace = true
@@ -28,6 +32,9 @@ features = ["builtin-queue"]
 [dependencies.symphonia]
 version = "0.5.2"
 features = ["wav"]
+
+[dependencies.tokio]
+workspace = true
 
 [dependencies.url]
 version = "2.4.0"
