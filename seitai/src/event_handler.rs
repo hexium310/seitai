@@ -2,7 +2,7 @@ use regex_lite::Regex;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
-    model::{application::Interaction, channel::Message, gateway::Ready},
+    model::{application::Interaction, channel::Message, gateway::Ready}, utils::{ContentSafeOptions, content_safe},
 };
 use songbird::input::Input;
 
@@ -13,6 +13,10 @@ use crate::{
 };
 
 pub struct Handler;
+
+enum Replacing {
+    General(Regex, String),
+}
 
 const DEFAULT_SPEED: f32 = 1.2;
 
@@ -52,7 +56,7 @@ impl EventHandler for Handler {
 
         let speaker = "1";
 
-        for text in replace_message(&message.content).split('\n') {
+        for text in replace_message(&context, &message).split('\n') {
             let text = text.trim();
             if text.is_empty() {
                 continue;
@@ -126,13 +130,31 @@ async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Optio
     }
 }
 
-fn replace_message(message: &str) -> String {
-        let replacings = vec![
-            (Regex::new(r"(?:`[^`]+`|```[^`]+```)").unwrap(), "{{seitai::replacement::CODE}}"),
-            (Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap(), "{{seitai::replacement::URL}}"),
-        ];
+fn replace_message(context: &Context, message: &Message) -> String {
+    let replacings = vec![
+        Replacing::General(Regex::new(r"(?:`[^`]+`|```[^`]+```)").unwrap(), "\n{{seitai::replacement::CODE}}\n".to_string()),
+        Replacing::General(Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap(), "\n{{seitai::replacement::URL}}\n".to_string()),
+        Replacing::General(Regex::new(r"[wｗ]$").unwrap(), "ワラ".to_string()),
+        Replacing::General(Regex::new(r"[wｗ]{2,}").unwrap(), "ワラワラ".to_string()),
+        Replacing::General(Regex::new(r"。").unwrap(), "。\n".to_string()),
+        Replacing::General(Regex::new(r"<:([\w_]+):\d+>").unwrap(), "$1".to_string()),
+    ];
 
-        replacings.iter().fold(message.to_string(), |accumulator, replacing| {
-            replacing.0.split(&accumulator).collect::<Vec<_>>().join(&format!("\n{}\n", replacing.1))
-        })
+    let guild_id = message.guild_id.unwrap();
+    let content_safe_options = ContentSafeOptions::new()
+        .clean_role(true)
+        .clean_user(true)
+        .clean_channel(true)
+        .show_discriminator(false)
+        .display_as_member_from(guild_id)
+        .clean_here(false)
+        .clean_everyone(false);
+
+    replacings.iter().fold(content_safe(&context.cache, &message.content, &content_safe_options, &message.mentions), |accumulator, replacing| {
+        match replacing {
+            Replacing::General(regex, replacement) => {
+                regex.replace_all(&accumulator, replacement).to_string()
+            },
+        }
+    })
 }
