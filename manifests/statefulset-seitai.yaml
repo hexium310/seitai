@@ -30,7 +30,7 @@ spec:
               subPath: ./resources/
       containers:
         - name: seitai
-          image: ghcr.io/hexium310/seitai:0.1.4
+          image: ghcr.io/hexium310/seitai
           env:
             - name: VOICEVOX_HOST
               value: voicevox
@@ -44,7 +44,7 @@ spec:
               name: seitai-resources
               subPath: ./resources/
         - name: restarter
-          image: ghcr.io/hexium310/restarter:0.1.0
+          image: ghcr.io/hexium310/restarter
           env:
             - name: DISCORD_TOKEN
               valueFrom:
