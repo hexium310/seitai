@@ -28,7 +28,7 @@ jobs:
         uses: docker/bake-action@v3
         with:
           push: true
-          targets: ${{ env.TARGETS }},latest
+          targets: ${{ env.TARGETS }}
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
