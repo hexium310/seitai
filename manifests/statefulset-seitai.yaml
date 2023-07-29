@@ -31,6 +31,7 @@ spec:
       containers:
         - name: seitai
           image: ghcr.io/hexium310/seitai
+          imagePullPolicy: Always
           env:
             - name: VOICEVOX_HOST
               value: voicevox
@@ -45,6 +46,7 @@ spec:
               subPath: ./resources/
         - name: restarter
           image: ghcr.io/hexium310/restarter
+          imagePullPolicy: Always
           env:
             - name: DISCORD_TOKEN
               valueFrom:
