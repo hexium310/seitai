@@ -41,20 +41,18 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     let manager = get_manager(context).await?;
     let call = manager.get_or_insert(guild.id);
 
-    let mut handler = call.lock().await;
-    handler.deafen(true).await.unwrap();
+    let mut call = call.lock().await;
+    call.deafen(true).await.unwrap();
 
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()
             .title("不具合")
-            .description(
-                "bot がボイスチャンネルに接続した後メッセージを読み上げるようになるまで数秒のラグがあります。"
-            )
+            .description("bot がボイスチャンネルに接続した後メッセージを読み上げるようになるまで数秒のラグがあります。")
             .colour(Colour::ORANGE),
     );
     respond(context, interaction, message).await?;
 
-    match handler.join(connect_to).await {
+    match call.join(connect_to).await {
         Ok(join) => {
             match join.await {
                 Ok(_) => {},

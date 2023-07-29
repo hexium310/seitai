@@ -7,7 +7,10 @@ use serenity::{
     futures::lock::Mutex,
     model::{application::CommandInteraction, guild::Guild},
 };
-use songbird::{input::cached::Compressed, Songbird};
+use songbird::{
+    input::{cached::Compressed, Input},
+    Songbird,
+};
 
 use crate::SoundStore;
 
@@ -36,4 +39,10 @@ pub(crate) async fn respond(
 pub(crate) async fn get_sound_store(context: &Context) -> Arc<Mutex<HashMap<String, Compressed>>> {
     let data = context.data.read().await;
     data.get::<SoundStore>().unwrap().clone()
+}
+
+pub(crate) async fn get_cached_audio(context: &Context, key: &str) -> Option<Input> {
+    let sound_store = get_sound_store(context).await;
+    let sound_store = sound_store.lock().await;
+    sound_store.get(key).map(|source| source.new_handle().into())
 }

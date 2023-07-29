@@ -36,7 +36,8 @@ async fn main() {
 
         let resources = vec![
             ("CODE", "resources/code.wav"),
-            ("URL", "resources/url.wav")
+            ("URL", "resources/url.wav"),
+            ("connected", "resources/connected.wav"),
         ];
         for resource in resources {
             let audio = set_up_audio(resource.1).await.unwrap();

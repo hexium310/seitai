@@ -15,6 +15,7 @@ generate_audio() {
 }
 
 generate_audio 'コード省略' code.wav
+generate_audio '接続しました' connected.wav
 generate_audio URL url.wav
 
 echo $(ls ./resources) are available

@@ -1,10 +1,12 @@
 use std::{borrow::Borrow, env};
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use hyper::{body::Bytes, Body, Client as HttpClient, Request};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::Url;
+
+const DEFAULT_SPEED: f32 = 1.2;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +34,7 @@ pub(crate) async fn generate_audio_query(speaker: &str, text: &str) -> Result<Au
     Ok(serde_json::from_slice(&bytes)?)
 }
 
-pub(crate) async fn generate_audio(speaker: &str, json: &str) -> Result<Bytes> {
+pub(crate) async fn synthesize(speaker: &str, json: &str) -> Result<Bytes> {
     let url = build_url("synthesis", &[("speaker", speaker)])?;
     let request = Request::post(&url)
         .header("content-type", "application/json")
@@ -42,6 +44,18 @@ pub(crate) async fn generate_audio(speaker: &str, json: &str) -> Result<Bytes> {
     let bytes = hyper::body::to_bytes(response.into_body()).await?;
 
     Ok(bytes)
+}
+
+pub(crate) async fn generate_audio(speaker: &str, text: &str) -> Result<Bytes> {
+    let mut audio_query = generate_audio_query(speaker, text)
+        .await
+        .with_context(|| format!("Generating audio query with `{text}` failed"))?;
+    // TODO: Truncate message too long
+    audio_query.speed_scale = DEFAULT_SPEED + (text.len() / 50) as f32 * 0.1;
+    let json = serde_json::to_string(&audio_query).unwrap();
+    synthesize(speaker, &json)
+        .await
+        .with_context(|| format!("Synthesizing failed. The audio query used is {json}"))
 }
 
 fn build_url<I, K, V>(endpoint: &str, params: I) -> Result<String>
