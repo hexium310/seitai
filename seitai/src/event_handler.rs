@@ -1,6 +1,6 @@
 use regex_lite::Regex;
 use serenity::{
-    all::VoiceState,
+    all::{VoiceState, GuildId},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
@@ -43,15 +43,13 @@ impl EventHandler for Handler {
         }
 
         let guild_id = message.guild_id.unwrap();
-        let manager = get_manager(&context).await.unwrap();
 
-        // Returns when the bot is not connected to a voice channel
-        let call = match manager.get(guild_id) {
-            Some(call) => call,
-            None => {
-                return;
-            },
-        };
+        if !is_connected(&context, guild_id).await {
+            return;
+        }
+
+        let manager = get_manager(&context).await.unwrap();
+        let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
         let speaker = "1";
@@ -97,6 +95,11 @@ impl EventHandler for Handler {
                 return;
             },
         };
+
+        if !is_connected(&context, guild_id).await {
+            return;
+        }
+
         let bot_id = context.http.get_current_user().await.unwrap().id;
         let manager = get_manager(&context).await.unwrap();
         let call = manager.get_or_insert(guild_id);
@@ -185,4 +188,9 @@ fn replace_message(context: &Context, message: &Message) -> String {
             Replacing::General(regex, replacement) => regex.replace_all(&accumulator, replacement).to_string(),
         },
     )
+}
+
+async fn is_connected(context: &Context, guild_id: impl Into<GuildId>) -> bool {
+    let manager = get_manager(context).await.unwrap();
+    manager.get(guild_id.into()).is_some()
 }
