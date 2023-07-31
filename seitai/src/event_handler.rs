@@ -25,6 +25,7 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, context: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
             let result = match command.data.name.as_str() {
+                "dictionary" => commands::dictionary::run(&context, &command).await,
                 "help" => commands::help::run(&context, &command).await,
                 "join" => commands::join::run(&context, &command).await,
                 "leave" => commands::leave::run(&context, &command).await,
@@ -75,6 +76,7 @@ impl EventHandler for Handler {
                 .set_commands(
                     &context.http,
                     vec![
+                        commands::dictionary::register(),
                         commands::help::register(),
                         commands::join::register(),
                         commands::leave::register(),
@@ -164,7 +166,7 @@ fn replace_message(context: &Context, message: &Message) -> String {
         Replacing::General(Regex::new(r"[wｗ]$").unwrap(), "ワラ".to_string()),
         Replacing::General(Regex::new(r"[wｗ]{2,}").unwrap(), "ワラワラ".to_string()),
         Replacing::General(Regex::new(r"。").unwrap(), "。\n".to_string()),
-        Replacing::General(Regex::new(r"<:([\w_]+):\d+>").unwrap(), "$1".to_string()),
+        Replacing::General(Regex::new(r"<:([\w_]+):\d+>").unwrap(), ":$1:".to_string()),
     ];
 
     let guild_id = message.guild_id.unwrap();
