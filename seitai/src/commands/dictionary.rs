@@ -11,9 +11,17 @@ use serenity::{
 };
 use uuid::Uuid;
 
-use crate::{utils::respond, voicevox};
+use crate::{utils::{respond, normalize}, voicevox};
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
+    let guild_id = interaction.guild_id.unwrap();
+    let users = guild_id
+        .members(&context.http, None, None)
+        .await?
+        .iter()
+        .map(|member| member.user.clone())
+        .collect::<Vec<_>>();
+
     for option in &interaction.data.options {
         match option.name.as_str() {
             "add" => {
@@ -21,6 +29,10 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 subcommand_options
                     .entry("accent_type".to_string())
                     .or_insert("0".to_string());
+                subcommand_options.entry("surface".to_string()).and_modify(|word| {
+                    let text = normalize(context, &guild_id, &users, word);
+                    *word = Regex::new(r"<:([\w_]+):\d+>").unwrap().replace_all(&text, ":$1:").to_string();
+                });
                 let word = subcommand_options.get("surface").unwrap();
                 let uuid = match get_regsiterd(word).await {
                     Ok(uuid) => uuid,

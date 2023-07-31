@@ -4,13 +4,12 @@ use serenity::{
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
-    utils::{content_safe, ContentSafeOptions},
 };
 use songbird::input::Input;
 
 use crate::{
     commands,
-    utils::{get_cached_audio, get_manager},
+    utils::{get_cached_audio, get_manager, normalize},
     voicevox::generate_audio,
 };
 
@@ -170,22 +169,9 @@ fn replace_message(context: &Context, message: &Message) -> String {
     ];
 
     let guild_id = message.guild_id.unwrap();
-    let content_safe_options = ContentSafeOptions::new()
-        .clean_role(true)
-        .clean_user(true)
-        .clean_channel(true)
-        .show_discriminator(false)
-        .display_as_member_from(guild_id)
-        .clean_here(false)
-        .clean_everyone(false);
-
+    let text = normalize(context, &guild_id, &message.mentions, &message.content);
     replacings.iter().fold(
-        content_safe(
-            &context.cache,
-            &message.content,
-            &content_safe_options,
-            &message.mentions,
-        ),
+        text,
         |accumulator, replacing| match replacing {
             Replacing::General(regex, replacement) => regex.replace_all(&accumulator, replacement).to_string(),
         },
