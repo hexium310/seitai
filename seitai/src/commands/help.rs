@@ -31,13 +31,14 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
                         .fields([
                             (
                                 "add",
-                                &format!(
+                                format!(
                                     "{}\n{}",
                                     "単語を辞書に追加します。任意で指定できる`音が下がる位置`については次のリンクを参照してください。",
                                     "https://tdmelodic.readthedocs.io/ja/latest/pages/introduction.html#representation-of-accent-nuclei-by-digits"
-                                ),
+                                ).as_str(),
                                 false
                             ),
+                            ("list", "単語一覧を表示します。", true)
                         ]),
                 ),
                 _ => None,
@@ -62,6 +63,7 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
                         ),
                         false,
                     ),
+                    ("/dictionary list", "単語一覧を表示します。", true)
                 ]),
         );
     }

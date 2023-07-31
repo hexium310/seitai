@@ -43,6 +43,18 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
 
                 register_word(context, interaction, &subcommand_options).await?;
             },
+            // TODO: Paginate
+            "list" => {
+                let dictionary = voicevox::get_dictionary().await?;
+                let words = dictionary.values().map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation)).collect::<Vec<_>>();
+                let message = CreateInteractionResponseMessage::new().embed(
+                    CreateEmbed::new()
+                        .title("単語一覧")
+                        .description(format!("```\n{}\n```", words.join("\n")))
+                        .colour(Colour::FOOYOO),
+                );
+                respond(context, interaction, message).await?;
+            }
             _ => {
                 unreachable!();
             },
@@ -86,10 +98,12 @@ pub fn register() -> CreateCommand {
             .add_sub_option(word_type)
             .add_sub_option(priority)
     };
+    let list = CreateCommandOption::new(CommandOptionType::SubCommand, "list", "List registered words")
+        .description_localized("ja", "登録されている単語を表示します。");
 
     CreateCommand::new("dictionary")
         .description("Dictionary")
-        .set_options(vec![add])
+        .set_options(vec![add, list])
 }
 
 fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, String>> {
@@ -186,12 +200,24 @@ async fn update_word(context: &Context, interaction: &CommandInteraction, uuid: 
 }
 
 fn to_full_width(text: &str) -> String {
+    Regex::new(r"\s")
+        .unwrap()
+        .replace_all(text, "\u{3000}")
+        .chars()
+        .map(|char| match u32::from(char) {
+            code @ 0x21..=0x7E => char::from_u32(code + 0xFEE0).unwrap_or(char),
+            _ => char,
+        })
+        .collect()
+}
+
+fn to_half_width(text: &str) -> String {
     Regex::new(r"\u3000")
         .unwrap()
         .replace_all(text, " ")
         .chars()
         .map(|char| match u32::from(char) {
-            code @ 0x21..=0x7E => char::from_u32(code + 0xFEE0).unwrap_or(char),
+            code @ 0xFF01..=0xFF5E => char::from_u32(code - 0xFEE0).unwrap_or(char),
             _ => char,
         })
         .collect()
