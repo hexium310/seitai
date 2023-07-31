@@ -10,6 +10,10 @@ workspace = true
 version = "0.14.27"
 features = ["http1", "client", "runtime"]
 
+[dependencies.indexmap]
+version = "2.0.0"
+features = ["serde"]
+
 [dependencies.regex-lite]
 version = "0.1.0"
 

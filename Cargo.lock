@@ -802,6 +802,7 @@ checksum = "d5477fe2230a79769d8dc68e0eabf5437907c0457a5614a9e8dddb67f65eb65d"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.0",
+ "serde",
 ]
 
 [[package]]
@@ -1762,6 +1763,7 @@ version = "0.1.5"
 dependencies = [
  "anyhow",
  "hyper",
+ "indexmap 2.0.0",
  "regex-lite",
  "serde",
  "serde_json",

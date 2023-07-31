@@ -1,7 +1,8 @@
-use std::{borrow::Borrow, env, collections::HashMap};
+use std::{borrow::Borrow, env};
 
 use anyhow::{Context as _, Result};
 use hyper::{body::Bytes, Body, Client as HttpClient, Request, StatusCode};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::Url;
@@ -43,7 +44,7 @@ pub(crate) enum PutUserDictWordResponse {
     UnprocessableEntity(UnprocessableEntity),
 }
 
-pub(crate) type UserDictyResponse = HashMap<Uuid, UserDict>;
+pub(crate) type UserDictyResponse = IndexMap<Uuid, UserDict>;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]

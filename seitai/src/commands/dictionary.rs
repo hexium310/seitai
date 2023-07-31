@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::{bail, Result};
+use indexmap::IndexMap;
 use regex_lite::Regex;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
@@ -118,7 +119,7 @@ async fn get_regsiterd(word: &str) -> Result<Option<Uuid>> {
     let uuids = dictionary
         .into_iter()
         .filter(|(_uuid, item)| item.surface == to_full_width(word))
-        .collect::<HashMap<_, _>>();
+        .collect::<IndexMap<_, _>>();
     if uuids.len() > 1 {
         bail!("`{word}` is registered in more than one.");
     }
