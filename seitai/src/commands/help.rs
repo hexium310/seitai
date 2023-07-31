@@ -38,7 +38,8 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
                                 ).as_str(),
                                 false
                             ),
-                            ("list", "単語一覧を表示します。", true)
+                            ("list", "単語一覧を表示します。", true),
+                            ("delete", "単語を削除します。", true),
                         ]),
                 ),
                 _ => None,
@@ -63,7 +64,8 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
                         ),
                         false,
                     ),
-                    ("/dictionary list", "単語一覧を表示します。", true)
+                    ("/dictionary list", "単語一覧を表示します。", true),
+                    ("/dictionary delete", "単語を削除します。", true),
                 ]),
         );
     }
