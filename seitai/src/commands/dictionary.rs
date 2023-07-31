@@ -23,16 +23,17 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         .collect::<Vec<_>>();
 
     for option in &interaction.data.options {
+        let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
+        subcommand_options.entry("surface".to_string()).and_modify(|word| {
+            let text = normalize(context, &guild_id, &users, word);
+            *word = Regex::new(r"<:([\w_]+):\d+>").unwrap().replace_all(&text, ":$1:").to_string();
+        });
+
         match option.name.as_str() {
             "add" => {
-                let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
                 subcommand_options
                     .entry("accent_type".to_string())
                     .or_insert("0".to_string());
-                subcommand_options.entry("surface".to_string()).and_modify(|word| {
-                    let text = normalize(context, &guild_id, &users, word);
-                    *word = Regex::new(r"<:([\w_]+):\d+>").unwrap().replace_all(&text, ":$1:").to_string();
-                });
                 let word = subcommand_options.get("surface").unwrap();
                 let uuid = match get_regsiterd(word).await {
                     Ok(uuid) => uuid,
@@ -64,6 +65,35 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                         .title("単語一覧")
                         .description(format!("```\n{}\n```", words.join("\n")))
                         .colour(Colour::FOOYOO),
+                );
+                respond(context, interaction, message).await?;
+            },
+            "delete" => {
+                let word = subcommand_options.get("surface").unwrap();
+                let uuid = match get_regsiterd(word).await {
+                    Ok(uuid) => uuid,
+                    Err(why) => {
+                        let message = CreateInteractionResponseMessage::new().embed(
+                            CreateEmbed::new()
+                                .title("単語の削除に失敗しました。")
+                                .field("詳細", format!("```\n{}\n```", why), false)
+                                .colour(Colour::RED),
+                        );
+                        respond(context, interaction, message).await?;
+                        continue;
+                    }
+                };
+
+                if let Some(uuid) = uuid {
+                    delete_word(context, interaction, &uuid, &subcommand_options).await?;
+                    continue;
+                }
+
+                let message = CreateInteractionResponseMessage::new().embed(
+                    CreateEmbed::new()
+                        .title("単語は登録されていません。")
+                        .field("単語", format!("```\n{}\n```", word), false)
+                        .colour(Colour::RED),
                 );
                 respond(context, interaction, message).await?;
             }
@@ -112,10 +142,19 @@ pub fn register() -> CreateCommand {
     };
     let list = CreateCommandOption::new(CommandOptionType::SubCommand, "list", "List registered words")
         .description_localized("ja", "登録されている単語を表示します。");
+    let delete = {
+        let word = CreateCommandOption::new(CommandOptionType::String, "surface", "Word to be registered")
+            .name_localized("ja", "単語")
+            .description_localized("ja", "削除する単語")
+            .required(true);
+        CreateCommandOption::new(CommandOptionType::SubCommand, "delete", "Delete word in dictionary")
+            .description_localized("ja", "単語を辞書から削除します")
+            .add_sub_option(word)
+    };
 
     CreateCommand::new("dictionary")
         .description("Dictionary")
-        .set_options(vec![add, list])
+        .set_options(vec![add, list, delete])
 }
 
 fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, String>> {
@@ -203,6 +242,33 @@ async fn update_word(context: &Context, interaction: &CommandInteraction, uuid: 
                     .title("単語の更新に失敗しました。")
                     .field("詳細", format!("```\n{}\n```", error.detail), false)
                     .colour(Colour::RED),
+            );
+            respond(context, interaction, message).await?;
+        },
+    };
+
+    Ok(())
+}
+
+async fn delete_word(context: &Context, interaction: &CommandInteraction, uuid: &Uuid, property: &HashMap<String, String>) -> Result<()> {
+    let word = property.get("surface").unwrap();
+
+    match voicevox::delete_word(uuid).await? {
+        voicevox::DeleteUserDictWordResponse::NoContent => {
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                .title("単語を削除しました。")
+                .field("単語", format!("```\n{}\n```", word), false)
+                .colour(Colour::FOOYOO),
+            );
+            respond(context, interaction, message).await?;
+        },
+        voicevox::DeleteUserDictWordResponse::UnprocessableEntity(error) => {
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                .title("単語の削除に失敗しました。")
+                .field("詳細", format!("```\n{}\n```", error.detail), false)
+                .colour(Colour::RED),
             );
             respond(context, interaction, message).await?;
         },

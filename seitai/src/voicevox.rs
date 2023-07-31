@@ -44,7 +44,13 @@ pub(crate) enum PutUserDictWordResponse {
     UnprocessableEntity(UnprocessableEntity),
 }
 
-pub(crate) type UserDictyResponse = IndexMap<Uuid, UserDict>;
+#[derive(Debug)]
+pub(crate) enum DeleteUserDictWordResponse {
+    NoContent,
+    UnprocessableEntity(UnprocessableEntity),
+}
+
+pub(crate) type UserDictResponse = IndexMap<Uuid, UserDict>;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -99,7 +105,7 @@ pub(crate) async fn generate_audio(speaker: &str, text: &str) -> Result<Bytes> {
         .with_context(|| format!("Synthesizing failed. The audio query used is {json}"))
 }
 
-pub(crate) async fn get_dictionary() -> Result<UserDictyResponse> {
+pub(crate) async fn get_dictionary() -> Result<UserDictResponse> {
     let url = build_url("user_dict")?;
     let request = Request::get(&url)
         .body(Body::empty())?;
@@ -148,6 +154,21 @@ where
     match status {
         StatusCode::NO_CONTENT => Ok(PutUserDictWordResponse::NoContent),
         StatusCode::UNPROCESSABLE_ENTITY => Ok(PutUserDictWordResponse::UnprocessableEntity(serde_json::from_slice(&bytes)?)),
+        _ => unreachable!(),
+    }
+}
+
+pub(crate) async fn delete_word(uuid: &Uuid) -> Result<DeleteUserDictWordResponse> {
+    let url = build_url(&format!("user_dict_word/{}", uuid))?;
+    let request = Request::delete(&url)
+        .body(Body::empty())?;
+    let http_client = HttpClient::new();
+    let response = http_client.request(request).await?;
+    let status = response.status();
+    let bytes = hyper::body::to_bytes(response.into_body()).await?;
+    match status {
+        StatusCode::NO_CONTENT => Ok(DeleteUserDictWordResponse::NoContent),
+        StatusCode::UNPROCESSABLE_ENTITY => Ok(DeleteUserDictWordResponse::UnprocessableEntity(serde_json::from_slice(&bytes)?)),
         _ => unreachable!(),
     }
 }
