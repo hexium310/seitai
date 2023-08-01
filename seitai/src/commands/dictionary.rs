@@ -34,6 +34,9 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 subcommand_options
                     .entry("accent_type".to_string())
                     .or_insert("0".to_string());
+                subcommand_options.entry("pronunciation".to_string()).and_modify(|pronunciation| {
+                    *pronunciation = to_katakana(pronunciation);
+                });
                 let word = subcommand_options.get("surface").unwrap();
                 let uuid = match get_regsiterd(word).await {
                     Ok(uuid) => uuid,
@@ -294,6 +297,20 @@ fn to_half_width(text: &str) -> String {
         .chars()
         .map(|char| match u32::from(char) {
             code @ 0xFF01..=0xFF5E => char::from_u32(code - 0xFEE0).unwrap_or(char),
+            _ => char,
+        })
+        .collect()
+}
+
+const HIRAGANA_BEGIN: u32 = 'ぁ' as u32;
+const HIRAGANA_END: u32 = 'ゖ' as u32;
+const HIRAGANA_KATAKANA_DIFF: u32 = 0x60;
+
+fn to_katakana(text: &str) -> String {
+    text
+        .chars()
+        .map(|char| match u32::from(char) {
+            code @ HIRAGANA_BEGIN..=HIRAGANA_END => char::from_u32(code + HIRAGANA_KATAKANA_DIFF).unwrap_or(char),
             _ => char,
         })
         .collect()
