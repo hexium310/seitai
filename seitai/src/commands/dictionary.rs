@@ -278,9 +278,7 @@ async fn delete_word(context: &Context, interaction: &CommandInteraction, uuid: 
 }
 
 fn to_full_width(text: &str) -> String {
-    Regex::new(r"\s")
-        .unwrap()
-        .replace_all(text, "\u{3000}")
+    text
         .chars()
         .map(|char| match u32::from(char) {
             code @ 0x21..=0x7E => char::from_u32(code + 0xFEE0).unwrap_or(char),
