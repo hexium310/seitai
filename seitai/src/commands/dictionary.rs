@@ -10,8 +10,9 @@ use serenity::{
     model::{application::CommandInteraction, Colour},
 };
 use uuid::Uuid;
+use voicevox::dictionary::Dictionary;
 
-use crate::{utils::{respond, normalize}, voicevox};
+use crate::utils::{get_voicevox, normalize, respond};
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let guild_id = interaction.guild_id.unwrap();
@@ -21,12 +22,20 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         .iter()
         .map(|member| member.user.clone())
         .collect::<Vec<_>>();
+    let dictionary = {
+        let voicevox = get_voicevox(context).await;
+        let voicevox = voicevox.lock().await;
+        voicevox.dictionary.clone()
+    };
 
     for option in &interaction.data.options {
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
         subcommand_options.entry("surface".to_string()).and_modify(|word| {
             let text = normalize(context, &guild_id, &users, word);
-            *word = Regex::new(r"<:([\w_]+):\d+>").unwrap().replace_all(&text, ":$1:").to_string();
+            *word = Regex::new(r"<:([\w_]+):\d+>")
+                .unwrap()
+                .replace_all(&text, ":$1:")
+                .to_string();
         });
 
         match option.name.as_str() {
@@ -34,11 +43,13 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 subcommand_options
                     .entry("accent_type".to_string())
                     .or_insert("0".to_string());
-                subcommand_options.entry("pronunciation".to_string()).and_modify(|pronunciation| {
-                    *pronunciation = to_katakana(pronunciation);
-                });
+                subcommand_options
+                    .entry("pronunciation".to_string())
+                    .and_modify(|pronunciation| {
+                        *pronunciation = to_katakana(pronunciation);
+                    });
                 let word = subcommand_options.get("surface").unwrap();
-                let uuid = match get_regsiterd(word).await {
+                let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(why) => {
                         let message = CreateInteractionResponseMessage::new().embed(
@@ -49,20 +60,23 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                         );
                         respond(context, interaction, message).await?;
                         continue;
-                    }
+                    },
                 };
 
                 if let Some(uuid) = uuid {
-                    update_word(context, interaction, &uuid, &subcommand_options).await?;
+                    update_word(context, interaction, &dictionary, &uuid, &subcommand_options).await?;
                     continue;
                 }
 
-                register_word(context, interaction, &subcommand_options).await?;
+                register_word(context, interaction, &dictionary, &subcommand_options).await?;
             },
             // TODO: Paginate
             "list" => {
-                let dictionary = voicevox::get_dictionary().await?;
-                let words = dictionary.values().map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation)).collect::<Vec<_>>();
+                let dictionary = dictionary.list().await?;
+                let words = dictionary
+                    .values()
+                    .map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation))
+                    .collect::<Vec<_>>();
                 let message = CreateInteractionResponseMessage::new().embed(
                     CreateEmbed::new()
                         .title("単語一覧")
@@ -73,7 +87,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             },
             "delete" => {
                 let word = subcommand_options.get("surface").unwrap();
-                let uuid = match get_regsiterd(word).await {
+                let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(why) => {
                         let message = CreateInteractionResponseMessage::new().embed(
@@ -84,11 +98,11 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                         );
                         respond(context, interaction, message).await?;
                         continue;
-                    }
+                    },
                 };
 
                 if let Some(uuid) = uuid {
-                    delete_word(context, interaction, &uuid, &subcommand_options).await?;
+                    delete_word(context, interaction, &dictionary, &uuid, &subcommand_options).await?;
                     continue;
                 }
 
@@ -99,7 +113,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                         .colour(Colour::RED),
                 );
                 respond(context, interaction, message).await?;
-            }
+            },
             _ => {
                 unreachable!();
             },
@@ -182,9 +196,9 @@ fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, Strin
     }
 }
 
-async fn get_regsiterd(word: &str) -> Result<Option<Uuid>> {
-    let dictionary = voicevox::get_dictionary().await?;
-    let uuids = dictionary
+async fn get_regsiterd(dictionary: &Dictionary, word: &str) -> Result<Option<Uuid>> {
+    let list = dictionary.list().await?;
+    let uuids = list
         .into_iter()
         .filter(|(_uuid, item)| item.surface == to_full_width(word))
         .collect::<IndexMap<_, _>>();
@@ -195,12 +209,21 @@ async fn get_regsiterd(word: &str) -> Result<Option<Uuid>> {
     Ok(uuids.into_keys().next())
 }
 
-async fn register_word(context: &Context, interaction: &CommandInteraction, property: &HashMap<String, String>) -> Result<()> {
+async fn register_word(
+    context: &Context,
+    interaction: &CommandInteraction,
+    dictionary: &Dictionary,
+    property: &HashMap<String, String>,
+) -> Result<()> {
     let word = property.get("surface").unwrap();
     let pronunciation = property.get("pronunciation").unwrap();
+    let parameters = property
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect::<Vec<_>>();
 
-    match voicevox::register_word(property.iter()).await? {
-        voicevox::PostUserDictWordResponse::Ok(_id) => {
+    match dictionary.register_word(&parameters).await? {
+        voicevox::dictionary::PostUserDictWordResponse::Ok(_id) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語を登録しました。")
@@ -210,7 +233,7 @@ async fn register_word(context: &Context, interaction: &CommandInteraction, prop
             );
             respond(context, interaction, message).await?;
         },
-        voicevox::PostUserDictWordResponse::UnprocessableEntity(error) => {
+        voicevox::dictionary::PostUserDictWordResponse::UnprocessableEntity(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の登録に失敗しました。")
@@ -224,12 +247,22 @@ async fn register_word(context: &Context, interaction: &CommandInteraction, prop
     Ok(())
 }
 
-async fn update_word(context: &Context, interaction: &CommandInteraction, uuid: &Uuid, property: &HashMap<String, String>) -> Result<()> {
+async fn update_word(
+    context: &Context,
+    interaction: &CommandInteraction,
+    dictionary: &Dictionary,
+    uuid: &Uuid,
+    property: &HashMap<String, String>,
+) -> Result<()> {
     let word = property.get("surface").unwrap();
     let pronunciation = property.get("pronunciation").unwrap();
+    let parameters = property
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect::<Vec<_>>();
 
-    match voicevox::update_word(uuid, property.iter()).await? {
-        voicevox::PutUserDictWordResponse::NoContent => {
+    match dictionary.update_word(uuid, &parameters).await? {
+        voicevox::dictionary::PutUserDictWordResponse::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語を更新しました。")
@@ -239,7 +272,7 @@ async fn update_word(context: &Context, interaction: &CommandInteraction, uuid: 
             );
             respond(context, interaction, message).await?;
         },
-        voicevox::PutUserDictWordResponse::UnprocessableEntity(error) => {
+        voicevox::dictionary::PutUserDictWordResponse::UnprocessableEntity(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の更新に失敗しました。")
@@ -253,25 +286,31 @@ async fn update_word(context: &Context, interaction: &CommandInteraction, uuid: 
     Ok(())
 }
 
-async fn delete_word(context: &Context, interaction: &CommandInteraction, uuid: &Uuid, property: &HashMap<String, String>) -> Result<()> {
+async fn delete_word(
+    context: &Context,
+    interaction: &CommandInteraction,
+    dictionary: &Dictionary,
+    uuid: &Uuid,
+    property: &HashMap<String, String>,
+) -> Result<()> {
     let word = property.get("surface").unwrap();
 
-    match voicevox::delete_word(uuid).await? {
-        voicevox::DeleteUserDictWordResponse::NoContent => {
+    match dictionary.delete_word(uuid).await? {
+        voicevox::dictionary::DeleteUserDictWordResponse::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
-                .title("単語を削除しました。")
-                .field("単語", format!("```\n{}\n```", word), false)
-                .colour(Colour::FOOYOO),
+                    .title("単語を削除しました。")
+                    .field("単語", format!("```\n{}\n```", word), false)
+                    .colour(Colour::FOOYOO),
             );
             respond(context, interaction, message).await?;
         },
-        voicevox::DeleteUserDictWordResponse::UnprocessableEntity(error) => {
+        voicevox::dictionary::DeleteUserDictWordResponse::UnprocessableEntity(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
-                .title("単語の削除に失敗しました。")
-                .field("詳細", format!("```\n{}\n```", error.detail), false)
-                .colour(Colour::RED),
+                    .title("単語の削除に失敗しました。")
+                    .field("詳細", format!("```\n{}\n```", error.detail), false)
+                    .colour(Colour::RED),
             );
             respond(context, interaction, message).await?;
         },
@@ -281,8 +320,7 @@ async fn delete_word(context: &Context, interaction: &CommandInteraction, uuid: 
 }
 
 fn to_full_width(text: &str) -> String {
-    text
-        .chars()
+    text.chars()
         .map(|char| match u32::from(char) {
             code @ 0x21..=0x7E => char::from_u32(code + 0xFEE0).unwrap_or(char),
             _ => char,
@@ -307,8 +345,7 @@ const HIRAGANA_END: u32 = 'ゖ' as u32;
 const HIRAGANA_KATAKANA_DIFF: u32 = 0x60;
 
 fn to_katakana(text: &str) -> String {
-    text
-        .chars()
+    text.chars()
         .map(|char| match u32::from(char) {
             code @ HIRAGANA_BEGIN..=HIRAGANA_END => char::from_u32(code + HIRAGANA_KATAKANA_DIFF).unwrap_or(char),
             _ => char,

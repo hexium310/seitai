@@ -2,17 +2,20 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{Context as _, Result};
 use serenity::{
+    all::{GuildId, User},
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
     client::Context,
     futures::lock::Mutex,
-    model::{application::CommandInteraction, guild::Guild}, utils::{ContentSafeOptions, content_safe}, all::{GuildId, User},
+    model::{application::CommandInteraction, guild::Guild},
+    utils::{content_safe, ContentSafeOptions},
 };
 use songbird::{
     input::{cached::Compressed, Input},
     Songbird,
 };
+use voicevox::Voicevox;
 
-use crate::SoundStore;
+use crate::{SoundStore, VoicevoxClient};
 
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)
@@ -57,10 +60,10 @@ pub(crate) fn normalize(context: &Context, guild_id: &GuildId, users: &[User], t
         .clean_here(false)
         .clean_everyone(false);
 
-    content_safe(
-        &context.cache,
-        text,
-        &content_safe_options,
-        users,
-    )
+    content_safe(&context.cache, text, &content_safe_options, users)
+}
+
+pub(crate) async fn get_voicevox(context: &Context) -> Arc<Mutex<Voicevox>> {
+    let data = context.data.read().await;
+    data.get::<VoicevoxClient>().unwrap().clone()
 }

@@ -7,16 +7,23 @@ use songbird::{
     input::{cached::Compressed, File},
     SerenityInit,
 };
+use voicevox::Voicevox;
 
 mod commands;
 mod event_handler;
 mod utils;
-mod voicevox;
+// mod voicevox;
 
 struct SoundStore;
 
 impl TypeMapKey for SoundStore {
     type Value = Arc<Mutex<HashMap<String, Compressed>>>;
+}
+
+struct VoicevoxClient;
+
+impl TypeMapKey for VoicevoxClient {
+    type Value = Arc<Mutex<Voicevox>>;
 }
 
 #[tokio::main]
@@ -45,6 +52,10 @@ async fn main() {
         }
 
         data.insert::<SoundStore>(Arc::new(Mutex::new(audio_map)));
+
+        let voicevox_host = env::var("VOICEVOX_HOST").expect("`VOICEVOX_HOST` is not set.");
+        let voicevox = Voicevox::new(&voicevox_host);
+        data.insert::<VoicevoxClient>(Arc::new(Mutex::new(voicevox)));
     }
 
     if let Err(why) = client.start().await {

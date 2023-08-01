@@ -6,23 +6,12 @@ edition = "2021"
 [dependencies.anyhow]
 workspace = true
 
-[dependencies.hyper]
-version = "0.14.27"
-features = ["http1", "client", "runtime"]
-
 [dependencies.indexmap]
 version = "2.0.0"
 features = ["serde"]
 
 [dependencies.regex-lite]
 version = "0.1.0"
-
-[dependencies.serde]
-version = "1.0.175"
-features = ["derive"]
-
-[dependencies.serde_json]
-version = "1.0.103"
 
 [dependencies.serenity]
 workspace = true
@@ -40,9 +29,8 @@ features = ["wav"]
 [dependencies.tokio]
 workspace = true
 
-[dependencies.url]
-version = "2.4.0"
-
 [dependencies.uuid]
-version = "1.4.1"
-features = ["v4", "serde"]
+workspace = true
+
+[dependencies.voicevox]
+path = "../crates/voicevox"
