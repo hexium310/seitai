@@ -1,11 +1,11 @@
 use regex_lite::Regex;
 use serenity::{
-    all::{GuildId, VoiceState},
+    all::{ChannelId as SerenityChannelId, GuildId, UserId as SerenityUserId, VoiceState},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
-use songbird::input::Input;
+use songbird::{input::Input, Call};
 
 use crate::{
     commands,
@@ -88,59 +88,35 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn voice_state_update(&self, context: Context, _old: Option<VoiceState>, new: VoiceState) {
-        let guild_id = match new.guild_id {
-            Some(guild_id) => guild_id,
-            None => {
-                return;
-            },
+    async fn voice_state_update(&self, context: Context, old_state: Option<VoiceState>, new_state: VoiceState) {
+        let Some(guild_id) = new_state.guild_id else {
+            return;
         };
 
-        if !is_connected(&context, guild_id).await {
-            return;
-        }
-
-        let bot_id = context.http.get_current_user().await.unwrap().id;
         let manager = get_manager(&context).await.unwrap();
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        if new.channel_id.is_none() {
+        let Some(connection) = call.current_connection() else {
             return;
-        }
-
-        let get_user_is = async {
-            if new.user_id == bot_id {
-                return None;
-            }
-
-            let user = new.user_id.to_user(&context.http).await.unwrap();
-            let name = user
-                .nick_in(&context.http, guild_id)
-                .await
-                .or(user.global_name)
-                .unwrap_or(user.name);
-            let text = format!("{name}さんが");
-
-            let audio_generator = {
-                let voicevox = get_voicevox(&context).await;
-                let voicevox = voicevox.lock().await;
-                voicevox.audio_generator.clone()
-            };
-            let speaker = "1";
-            let audio = match audio_generator.generate(speaker, &text).await {
-                Ok(audio) => audio,
-                Err(why) => {
-                    println!("Generating audio failed because of `{why}`");
-                    return None;
-                },
-            };
-            Some(Input::from(audio))
         };
 
-        let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(&context, "connected"));
-        for audio in [user_is, connected].into_iter().flatten() {
-            call.enqueue_input(audio).await;
+        let channel_id_bot_at = connection
+            .channel_id
+            .map(|channel_id| SerenityChannelId::from(channel_id.0));
+        let bot_id = SerenityUserId::from(connection.user_id.0);
+
+        let is_disconnected = new_state.channel_id.is_none();
+        let newly_connected = match &old_state {
+            Some(old_state) => old_state.channel_id != new_state.channel_id,
+            None => true,
+        };
+        let is_bot_connected = new_state.user_id == bot_id;
+        let is_connected_bot_at = new_state.channel_id == channel_id_bot_at;
+
+        if !is_disconnected && newly_connected && is_bot_connected || is_connected_bot_at {
+            handle_connect(&context, &new_state, &mut call, is_bot_connected).await;
+            return;
         }
     }
 }
@@ -194,4 +170,41 @@ fn replace_message(context: &Context, message: &Message) -> String {
 async fn is_connected(context: &Context, guild_id: impl Into<GuildId>) -> bool {
     let manager = get_manager(context).await.unwrap();
     manager.get(guild_id.into()).is_some()
+}
+
+async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, is_bot_connected: bool) {
+    let get_user_is = async {
+        if is_bot_connected {
+            return None;
+        }
+
+        let member = state.member.as_ref()?;
+        let user = &member.user;
+        let name = member
+            .nick
+            .clone()
+            .or(user.global_name.clone())
+            .unwrap_or(user.name.clone());
+        let text = format!("{name}さんが");
+
+        let audio_generator = {
+            let voicevox = get_voicevox(context).await;
+            let voicevox = voicevox.lock().await;
+            voicevox.audio_generator.clone()
+        };
+        let speaker = "1";
+        let audio = match audio_generator.generate(speaker, &text).await {
+            Ok(audio) => audio,
+            Err(why) => {
+                println!("Generating audio failed because of `{why}`");
+                return None;
+            },
+        };
+        Some(Input::from(audio))
+    };
+
+    let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(context, "connected"));
+    for audio in [user_is, connected].into_iter().flatten() {
+        call.enqueue_input(audio).await;
+    }
 }
