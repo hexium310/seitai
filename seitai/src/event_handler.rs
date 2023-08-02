@@ -105,40 +105,42 @@ impl EventHandler for Handler {
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        if new.channel_id.is_some() {
-            let get_user_is = async {
-                if new.user_id == bot_id {
-                    return None;
-                }
+        if new.channel_id.is_none() {
+            return;
+        }
 
-                let user = new.user_id.to_user(&context.http).await.unwrap();
-                let name = user
-                    .nick_in(&context.http, guild_id)
-                    .await
-                    .or(user.global_name)
-                    .unwrap_or(user.name);
-                let text = format!("{name}さんが");
-
-                let audio_generator = {
-                    let voicevox = get_voicevox(&context).await;
-                    let voicevox = voicevox.lock().await;
-                    voicevox.audio_generator.clone()
-                };
-                let speaker = "1";
-                let audio = match audio_generator.generate(speaker, &text).await {
-                    Ok(audio) => audio,
-                    Err(why) => {
-                        println!("Generating audio failed because of `{why}`");
-                        return None;
-                    },
-                };
-                Some(Input::from(audio))
-            };
-
-            let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(&context, "connected"));
-            for audio in [user_is, connected].into_iter().flatten() {
-                call.enqueue_input(audio).await;
+        let get_user_is = async {
+            if new.user_id == bot_id {
+                return None;
             }
+
+            let user = new.user_id.to_user(&context.http).await.unwrap();
+            let name = user
+                .nick_in(&context.http, guild_id)
+                .await
+                .or(user.global_name)
+                .unwrap_or(user.name);
+            let text = format!("{name}さんが");
+
+            let audio_generator = {
+                let voicevox = get_voicevox(&context).await;
+                let voicevox = voicevox.lock().await;
+                voicevox.audio_generator.clone()
+            };
+            let speaker = "1";
+            let audio = match audio_generator.generate(speaker, &text).await {
+                Ok(audio) => audio,
+                Err(why) => {
+                    println!("Generating audio failed because of `{why}`");
+                    return None;
+                },
+            };
+            Some(Input::from(audio))
+        };
+
+        let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(&context, "connected"));
+        for audio in [user_is, connected].into_iter().flatten() {
+            call.enqueue_input(audio).await;
         }
     }
 }
