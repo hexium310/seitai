@@ -10,7 +10,10 @@ use serenity::{
     model::{application::CommandInteraction, Colour},
 };
 use uuid::Uuid;
-use voicevox::dictionary::Dictionary;
+use voicevox::dictionary::{
+    response::{DeleteUserDictWordResult, GetUserDictResult, PostUserDictWordResult, PutUserDictWordResult},
+    Dictionary,
+};
 
 use crate::utils::{get_voicevox, normalize, respond};
 
@@ -72,8 +75,8 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             },
             // TODO: Paginate
             "list" => {
-                let dictionary = dictionary.list().await?;
-                let words = dictionary
+                let GetUserDictResult::Ok(list) = dictionary.list().await?;
+                let words = list
                     .values()
                     .map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation))
                     .collect::<Vec<_>>();
@@ -197,7 +200,7 @@ fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, Strin
 }
 
 async fn get_regsiterd(dictionary: &Dictionary, word: &str) -> Result<Option<Uuid>> {
-    let list = dictionary.list().await?;
+    let GetUserDictResult::Ok(list) = dictionary.list().await?;
     let uuids = list
         .into_iter()
         .filter(|(_uuid, item)| item.surface == to_full_width(word))
@@ -223,7 +226,7 @@ async fn register_word(
         .collect::<Vec<_>>();
 
     match dictionary.register_word(&parameters).await? {
-        voicevox::dictionary::PostUserDictWordResponse::Ok(_id) => {
+        PostUserDictWordResult::Ok(_id) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語を登録しました。")
@@ -233,7 +236,7 @@ async fn register_word(
             );
             respond(context, interaction, message).await?;
         },
-        voicevox::dictionary::PostUserDictWordResponse::UnprocessableEntity(error) => {
+        PostUserDictWordResult::UnprocessableEntity(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の登録に失敗しました。")
@@ -262,7 +265,7 @@ async fn update_word(
         .collect::<Vec<_>>();
 
     match dictionary.update_word(uuid, &parameters).await? {
-        voicevox::dictionary::PutUserDictWordResponse::NoContent => {
+        PutUserDictWordResult::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語を更新しました。")
@@ -272,7 +275,7 @@ async fn update_word(
             );
             respond(context, interaction, message).await?;
         },
-        voicevox::dictionary::PutUserDictWordResponse::UnprocessableEntity(error) => {
+        PutUserDictWordResult::UnprocessableEntity(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の更新に失敗しました。")
@@ -296,7 +299,7 @@ async fn delete_word(
     let word = property.get("surface").unwrap();
 
     match dictionary.delete_word(uuid).await? {
-        voicevox::dictionary::DeleteUserDictWordResponse::NoContent => {
+        DeleteUserDictWordResult::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語を削除しました。")
@@ -305,7 +308,7 @@ async fn delete_word(
             );
             respond(context, interaction, message).await?;
         },
-        voicevox::dictionary::DeleteUserDictWordResponse::UnprocessableEntity(error) => {
+        DeleteUserDictWordResult::UnprocessableEntity(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の削除に失敗しました。")
