@@ -15,7 +15,10 @@ use voicevox::dictionary::{
     Dictionary,
 };
 
-use crate::utils::{get_voicevox, normalize, respond};
+use crate::{
+    character_converter::{to_full_width, to_half_width, to_katakana},
+    utils::{get_voicevox, normalize, respond},
+};
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let guild_id = interaction.guild_id.unwrap();
@@ -320,38 +323,4 @@ async fn delete_word(
     };
 
     Ok(())
-}
-
-fn to_full_width(text: &str) -> String {
-    text.chars()
-        .map(|char| match u32::from(char) {
-            code @ 0x21..=0x7E => char::from_u32(code + 0xFEE0).unwrap_or(char),
-            _ => char,
-        })
-        .collect()
-}
-
-fn to_half_width(text: &str) -> String {
-    Regex::new(r"\u3000")
-        .unwrap()
-        .replace_all(text, " ")
-        .chars()
-        .map(|char| match u32::from(char) {
-            code @ 0xFF01..=0xFF5E => char::from_u32(code - 0xFEE0).unwrap_or(char),
-            _ => char,
-        })
-        .collect()
-}
-
-const HIRAGANA_BEGIN: u32 = 'ぁ' as u32;
-const HIRAGANA_END: u32 = 'ゖ' as u32;
-const HIRAGANA_KATAKANA_DIFF: u32 = 0x60;
-
-fn to_katakana(text: &str) -> String {
-    text.chars()
-        .map(|char| match u32::from(char) {
-            code @ HIRAGANA_BEGIN..=HIRAGANA_END => char::from_u32(code + HIRAGANA_KATAKANA_DIFF).unwrap_or(char),
-            _ => char,
-        })
-        .collect()
 }

@@ -12,7 +12,7 @@ use voicevox::Voicevox;
 mod commands;
 mod event_handler;
 mod utils;
-// mod voicevox;
+mod character_converter;
 
 struct SoundStore;
 
