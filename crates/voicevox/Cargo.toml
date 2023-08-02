@@ -1,0 +1,31 @@
+[package]
+name = "voicevox"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies.anyhow]
+workspace = true
+
+[dependencies.async-trait]
+version = "0.1.72"
+
+[dependencies.hyper]
+version = "0.14.27"
+features = ["http1", "client", "runtime"]
+
+[dependencies.indexmap]
+version = "2.0.0"
+features = ["serde"]
+
+[dependencies.serde]
+version = "1.0.175"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0.103"
+
+[dependencies.uuid]
+workspace = true
+
+[dependencies.url]
+version = "2.4.0"

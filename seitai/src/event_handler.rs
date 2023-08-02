@@ -1,6 +1,6 @@
 use regex_lite::Regex;
 use serenity::{
-    all::{VoiceState, GuildId},
+    all::{GuildId, VoiceState},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
@@ -9,8 +9,7 @@ use songbird::input::Input;
 
 use crate::{
     commands,
-    utils::{get_cached_audio, get_manager, normalize},
-    voicevox::generate_audio,
+    utils::{get_cached_audio, get_manager, get_voicevox, normalize},
 };
 
 pub struct Handler;
@@ -106,41 +105,58 @@ impl EventHandler for Handler {
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        if new.channel_id.is_some() {
-            let get_user_is = async {
-                if new.user_id == bot_id {
-                    return None;
-                }
+        if new.channel_id.is_none() {
+            return;
+        }
 
-                let user = new.user_id.to_user(&context.http).await.unwrap();
-                let name = user.nick_in(&context.http, guild_id).await.or(user.global_name).unwrap_or(user.name);
-                let text = format!("{name}さんが");
-
-                let speaker = "1";
-                let audio = match generate_audio(speaker, &text).await {
-                    Ok(audio) => audio,
-                    Err(why) => {
-                        println!("Generating audio failed because of `{why}`");
-                        return None;
-                    },
-                };
-                Some(Input::from(audio))
-            };
-
-            let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(&context, "connected"));
-            for audio in [user_is, connected].into_iter().flatten() {
-                call.enqueue_input(audio).await;
+        let get_user_is = async {
+            if new.user_id == bot_id {
+                return None;
             }
+
+            let user = new.user_id.to_user(&context.http).await.unwrap();
+            let name = user
+                .nick_in(&context.http, guild_id)
+                .await
+                .or(user.global_name)
+                .unwrap_or(user.name);
+            let text = format!("{name}さんが");
+
+            let audio_generator = {
+                let voicevox = get_voicevox(&context).await;
+                let voicevox = voicevox.lock().await;
+                voicevox.audio_generator.clone()
+            };
+            let speaker = "1";
+            let audio = match audio_generator.generate(speaker, &text).await {
+                Ok(audio) => audio,
+                Err(why) => {
+                    println!("Generating audio failed because of `{why}`");
+                    return None;
+                },
+            };
+            Some(Input::from(audio))
+        };
+
+        let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(&context, "connected"));
+        for audio in [user_is, connected].into_iter().flatten() {
+            call.enqueue_input(audio).await;
         }
     }
 }
 
 async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Option<Input> {
+    let audio_generator = {
+        let voicevox = get_voicevox(context).await;
+        let voicevox = voicevox.lock().await;
+        voicevox.audio_generator.clone()
+    };
+
     match text {
         "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE").await,
         "{{seitai::replacement::URL}}" => get_cached_audio(context, "URL").await,
         _ => {
-            let audio = match generate_audio(speaker, text).await {
+            let audio = match audio_generator.generate(speaker, text).await {
                 Ok(audio) => audio,
                 Err(why) => {
                     println!("Generating audio failed because of `{why}`");
@@ -170,12 +186,9 @@ fn replace_message(context: &Context, message: &Message) -> String {
 
     let guild_id = message.guild_id.unwrap();
     let text = normalize(context, &guild_id, &message.mentions, &message.content);
-    replacings.iter().fold(
-        text,
-        |accumulator, replacing| match replacing {
-            Replacing::General(regex, replacement) => regex.replace_all(&accumulator, replacement).to_string(),
-        },
-    )
+    replacings.iter().fold(text, |accumulator, replacing| match replacing {
+        Replacing::General(regex, replacement) => regex.replace_all(&accumulator, replacement).to_string(),
+    })
 }
 
 async fn is_connected(context: &Context, guild_id: impl Into<GuildId>) -> bool {
