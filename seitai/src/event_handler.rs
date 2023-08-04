@@ -183,8 +183,8 @@ fn replace_message(context: &Context, message: &Message) -> String {
             Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+"),
             "\n{{seitai::replacement::URL}}\n".to_string(),
         ),
-        Replacing::General(Regex::new(r"[wｗ]$"), "ワラ".to_string()),
         Replacing::General(Regex::new(r"[wｗ]{2,}"), "ワラワラ".to_string()),
+        Replacing::General(Regex::new(r"[wｗ]$"), "ワラ".to_string()),
         Replacing::General(Regex::new(r"。"), "。\n".to_string()),
         Replacing::General(Regex::new(r"<:([\w_]+):\d+>"), ":$1:".to_string()),
     ];
