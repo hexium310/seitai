@@ -8,6 +8,7 @@ use serenity::{
 };
 use songbird::{input::Input, Call};
 use tracing::{debug, error, info, instrument};
+use voicevox::audio::AudioGenerator;
 
 use crate::{
     commands,
@@ -65,13 +66,22 @@ impl EventHandler for Handler {
 
         let speaker = "1";
 
+        let audio_generator = {
+            let Some(voicevox) = get_voicevox(&context).await else {
+                error!("failed to get voicevox client to handle message");
+                return;
+            };
+            let voicevox = voicevox.lock().await;
+            voicevox.audio_generator.clone()
+        };
+
         for text in replace_message(&context, &message).split('\n') {
             let text = text.trim();
             if text.is_empty() {
                 continue;
             }
 
-            match get_audio_source(&context, text, speaker).await {
+            match get_audio_source(&context, &audio_generator, text, speaker).await {
                 Ok(input) => {
                     call.enqueue_input(input).await;
                 },
@@ -145,13 +155,7 @@ impl EventHandler for Handler {
     }
 }
 
-async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Result<Input> {
-    let audio_generator = {
-        let voicevox = get_voicevox(context).await.context("failed to get voicevox client")?;
-        let voicevox = voicevox.lock().await;
-        voicevox.audio_generator.clone()
-    };
-
+async fn get_audio_source(context: &Context, audio_generator: &AudioGenerator, text: &str, speaker: &str) -> Result<Input> {
     match text {
         "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE")
             .await
@@ -221,7 +225,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
 
         let audio_generator = {
             let Some(voicevox) = get_voicevox(context).await else {
-                error!("failed to get voicevox client");
+                error!("failed to get voicevox client to handle connect");
                 return None;
             };
             let voicevox = voicevox.lock().await;

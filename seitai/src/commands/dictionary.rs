@@ -33,7 +33,9 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         .map(|member| member.user.clone())
         .collect::<Vec<_>>();
     let dictionary = {
-        let voicevox = get_voicevox(context).await.context("failed to get voicevox client")?;
+        let voicevox = get_voicevox(context)
+            .await
+            .context("failed to get voicevox client for /dictionary command")?;
         let voicevox = voicevox.lock().await;
         voicevox.dictionary.clone()
     };
@@ -64,7 +66,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     });
                 let word = subcommand_options
                     .get("surface")
-                    .context("error: surface doesn't exists")?;
+                    .context("error: there is no surface to make sure whether word is regsitered")?;
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(error) => {
@@ -89,7 +91,10 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             },
             // TODO: Paginate
             "list" => {
-                let GetUserDictResult::Ok(list) = dictionary.list().await.context("failed to get dictionary")?;
+                let GetUserDictResult::Ok(list) = dictionary
+                    .list()
+                    .await
+                    .context("failed to get dictionary for /dictionary list command")?;
                 let words = list
                     .values()
                     .map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation))
@@ -105,7 +110,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             "delete" => {
                 let word = subcommand_options
                     .get("surface")
-                    .context("error: surface doesn't exists")?;
+                    .context("error: there is no surface to delete word")?;
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(error) => {
@@ -122,7 +127,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 };
 
                 if let Some(uuid) = uuid {
-                    delete_word(context, interaction, &dictionary, &uuid, &subcommand_options).await?;
+                    delete_word(context, interaction, &dictionary, &uuid, word).await?;
                     continue;
                 }
 
@@ -217,7 +222,10 @@ fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, Strin
 }
 
 async fn get_regsiterd(dictionary: &Dictionary, word: &str) -> Result<Option<Uuid>> {
-    let GetUserDictResult::Ok(list) = dictionary.list().await.context("failed to get dictionary")?;
+    let GetUserDictResult::Ok(list) = dictionary
+        .list()
+        .await
+        .context("failed to get dictionary to register word")?;
     let uuids = list
         .into_iter()
         .filter(|(_uuid, item)| item.surface == to_full_width(word))
@@ -235,10 +243,12 @@ async fn register_word(
     dictionary: &Dictionary,
     property: &HashMap<String, String>,
 ) -> Result<()> {
-    let word = property.get("surface").context("error: surface doesn't exists")?;
+    let word = property
+        .get("surface")
+        .context("error: there is no surface to register word")?;
     let pronunciation = property
         .get("pronunciation")
-        .context("error: pronunciation doesn't exists")?;
+        .context("error: there is no pronunciation to register word")?;
     let parameters = property
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -277,10 +287,12 @@ async fn update_word(
     uuid: &Uuid,
     property: &HashMap<String, String>,
 ) -> Result<()> {
-    let word = property.get("surface").context("error: surface doesn't exists")?;
+    let word = property
+        .get("surface")
+        .context("error: there is no surface to update word")?;
     let pronunciation = property
         .get("pronunciation")
-        .context("error: pronunciation doesn't exists")?;
+        .context("error: there is no pronunciation to update word")?;
     let parameters = property
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -317,10 +329,8 @@ async fn delete_word(
     interaction: &CommandInteraction,
     dictionary: &Dictionary,
     uuid: &Uuid,
-    property: &HashMap<String, String>,
+    word: &str,
 ) -> Result<()> {
-    let word = property.get("surface").context("error: surface doesn't exists")?;
-
     match dictionary.delete_word(uuid).await? {
         DeleteUserDictWordResult::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
