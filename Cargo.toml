@@ -11,9 +11,20 @@ branch = "next"
 default-features = false
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
 
+[workspace.dependencies.time]
+version = "0.3.25"
+features = ["macros"]
+
 [workspace.dependencies.tokio]
 version = "1.28.2"
 features = ["macros", "net", "rt-multi-thread"]
+
+[workspace.dependencies.tracing]
+version = "0.1.37"
+
+[workspace.dependencies.tracing-subscriber]
+version = "0.3.17"
+features = ["local-time"]
 
 [workspace.dependencies.uuid]
 version = "1.4.1"

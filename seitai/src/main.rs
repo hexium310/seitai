@@ -1,18 +1,21 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env, process::exit, sync::Arc};
 
 use anyhow::Result;
+use logging::initialize_logging;
 use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::{
     driver::Bitrate,
     input::{cached::Compressed, File},
     SerenityInit,
 };
+use tracing::error;
 use voicevox::Voicevox;
 
+mod character_converter;
 mod commands;
 mod event_handler;
+mod logging;
 mod utils;
-mod character_converter;
 
 struct SoundStore;
 
@@ -28,14 +31,29 @@ impl TypeMapKey for VoicevoxClient {
 
 #[tokio::main]
 async fn main() {
-    let token = env::var("DISCORD_TOKEN").expect("`DISCORD_TOKEN` is not set.");
+    initialize_logging();
+
+    let token = match env::var("DISCORD_TOKEN") {
+        Ok(token) => token,
+        Err(error) => {
+            error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
+            exit(1);
+        },
+    };
 
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
-    let mut client = Client::builder(token, intents)
+    let mut client = match Client::builder(token, intents)
         .event_handler(event_handler::Handler)
         .register_songbird()
         .await
-        .expect("Error creating client");
+    {
+        Ok(client) => client,
+        Err(error) => {
+            error!("error creating serenity client\nError: {error:?}");
+            exit(1);
+        },
+    };
+
     {
         let mut data = client.data.write().await;
 
@@ -47,19 +65,35 @@ async fn main() {
             ("connected", "resources/connected.wav"),
         ];
         for resource in resources {
-            let audio = set_up_audio(resource.1).await.unwrap();
-            audio_map.insert(resource.0.into(), audio);
+            let key = resource.0;
+            let path = resource.1;
+
+            let audio = match set_up_audio(path).await {
+                Ok(audio) => audio,
+                Err(error) => {
+                    error!("failed to set up audio {path}\nError: {error:?}");
+                    continue;
+                },
+            };
+            audio_map.insert(key.into(), audio);
         }
 
         data.insert::<SoundStore>(Arc::new(Mutex::new(audio_map)));
 
-        let voicevox_host = env::var("VOICEVOX_HOST").expect("`VOICEVOX_HOST` is not set.");
+        let voicevox_host = match env::var("VOICEVOX_HOST") {
+            Ok(voicevox_host) => voicevox_host,
+            Err(error) => {
+                error!("failed to fetch environment variable VOICEVOX_HOST\nError: {error:?}");
+                exit(1);
+            },
+        };
         let voicevox = Voicevox::new(&voicevox_host);
         data.insert::<VoicevoxClient>(Arc::new(Mutex::new(voicevox)));
     }
 
-    if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
+    if let Err(error) = client.start().await {
+        error!("error starting client\nError: {error:?}");
+        exit(1);
     }
 }
 

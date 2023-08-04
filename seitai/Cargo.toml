@@ -26,7 +26,16 @@ features = ["builtin-queue"]
 version = "0.5.2"
 features = ["wav"]
 
+[dependencies.time]
+workspace = true
+
 [dependencies.tokio]
+workspace = true
+
+[dependencies.tracing]
+workspace = true
+
+[dependencies.tracing-subscriber]
 workspace = true
 
 [dependencies.uuid]

@@ -1,21 +1,24 @@
+use anyhow::{Context as _, Result};
 use regex_lite::Regex;
 use serenity::{
-    all::{ChannelId as SerenityChannelId, GuildId, UserId as SerenityUserId, VoiceState},
+    all::{ChannelId as SerenityChannelId, UserId as SerenityUserId, VoiceState},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
+use tracing::{debug, error, info};
 
 use crate::{
     commands,
     utils::{get_cached_audio, get_manager, get_voicevox, normalize},
 };
 
+#[derive(Debug)]
 pub struct Handler;
 
 enum Replacing {
-    General(Regex, String),
+    General(std::result::Result<Regex, regex_lite::Error>, String),
 }
 
 #[async_trait]
@@ -28,10 +31,11 @@ impl EventHandler for Handler {
                 "join" => commands::join::run(&context, &command).await,
                 "leave" => commands::leave::run(&context, &command).await,
                 _ => Ok(()),
-            };
+            }
+            .with_context(|| format!("failed to execute /{}", command.data.name));
 
-            if let Err(why) = result {
-                println!("{why}");
+            if let Err(error) = result {
+                error!("error handling slash command\nError: {error:?}");
             }
         }
     }
@@ -41,15 +45,23 @@ impl EventHandler for Handler {
             return;
         }
 
-        let guild_id = message.guild_id.unwrap();
-
-        if !is_connected(&context, guild_id).await {
+        let Some(guild_id) = message.guild_id else {
             return;
-        }
+        };
 
-        let manager = get_manager(&context).await.unwrap();
+        let manager = match get_manager(&context).await {
+            Ok(manager) => manager,
+            Err(error) => {
+                error!("{error:?}");
+                return;
+            },
+        };
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
+
+        if call.current_connection().is_none() {
+            return;
+        };
 
         let speaker = "1";
 
@@ -59,14 +71,20 @@ impl EventHandler for Handler {
                 continue;
             }
 
-            if let Some(input) = get_audio_source(&context, text, speaker).await {
-                call.enqueue_input(input).await;
-            }
+            match get_audio_source(&context, text, speaker).await {
+                Ok(input) => {
+                    call.enqueue_input(input).await;
+                },
+                Err(error) => {
+                    error!("failed to get audio source\nError: {error:?}");
+                },
+            };
         }
     }
 
+    #[tracing::instrument(skip(self, context))]
     async fn ready(&self, context: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is ready", ready.user.name);
 
         for guild in ready.guilds {
             let commands = guild
@@ -82,8 +100,8 @@ impl EventHandler for Handler {
                 )
                 .await;
 
-            if let Err(why) = commands {
-                println!("{why}");
+            if let Err(error) = commands {
+                error!("failed to regeister slash commands\nError: {error:?}");
             }
         }
     }
@@ -93,7 +111,13 @@ impl EventHandler for Handler {
             return;
         };
 
-        let manager = get_manager(&context).await.unwrap();
+        let manager = match get_manager(&context).await {
+            Ok(manager) => manager,
+            Err(error) => {
+                error!("{error:?}");
+                return;
+            },
+        };
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
@@ -121,55 +145,63 @@ impl EventHandler for Handler {
     }
 }
 
-async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Option<Input> {
+async fn get_audio_source(context: &Context, text: &str, speaker: &str) -> Result<Input> {
     let audio_generator = {
-        let voicevox = get_voicevox(context).await;
+        let voicevox = get_voicevox(context).await.context("failed to get voicevox client")?;
         let voicevox = voicevox.lock().await;
         voicevox.audio_generator.clone()
     };
 
     match text {
-        "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE").await,
-        "{{seitai::replacement::URL}}" => get_cached_audio(context, "URL").await,
+        "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE")
+            .await
+            .context("failed to get chaced audio: CODE"),
+        "{{seitai::replacement::URL}}" => get_cached_audio(context, "URL")
+            .await
+            .context("failed to get chaced audio: URL"),
         _ => {
-            let audio = match audio_generator.generate(speaker, text).await {
-                Ok(audio) => audio,
-                Err(why) => {
-                    println!("Generating audio failed because of `{why}`");
-                    return None;
-                },
-            };
-            Some(Input::from(audio))
+            let audio = audio_generator
+                .generate(speaker, text)
+                .await
+                .with_context(|| format!("failed to generate audio with {text}"))?;
+            Ok(Input::from(audio))
         },
     }
 }
 
 fn replace_message(context: &Context, message: &Message) -> String {
+    let Some(guild_id) = message.guild_id else {
+        return message.content.clone();
+    };
+
     let replacings = vec![
         Replacing::General(
-            Regex::new(r"(?:`[^`]+`|```[^`]+```)").unwrap(),
+            Regex::new(r"(?:`[^`]+`|```[^`]+```)"),
             "\n{{seitai::replacement::CODE}}\n".to_string(),
         ),
         Replacing::General(
-            Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+").unwrap(),
+            Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+"),
             "\n{{seitai::replacement::URL}}\n".to_string(),
         ),
-        Replacing::General(Regex::new(r"[wｗ]$").unwrap(), "ワラ".to_string()),
-        Replacing::General(Regex::new(r"[wｗ]{2,}").unwrap(), "ワラワラ".to_string()),
-        Replacing::General(Regex::new(r"。").unwrap(), "。\n".to_string()),
-        Replacing::General(Regex::new(r"<:([\w_]+):\d+>").unwrap(), ":$1:".to_string()),
+        Replacing::General(Regex::new(r"[wｗ]$"), "ワラ".to_string()),
+        Replacing::General(Regex::new(r"[wｗ]{2,}"), "ワラワラ".to_string()),
+        Replacing::General(Regex::new(r"。"), "。\n".to_string()),
+        Replacing::General(Regex::new(r"<:([\w_]+):\d+>"), ":$1:".to_string()),
     ];
 
-    let guild_id = message.guild_id.unwrap();
     let text = normalize(context, &guild_id, &message.mentions, &message.content);
     replacings.iter().fold(text, |accumulator, replacing| match replacing {
-        Replacing::General(regex, replacement) => regex.replace_all(&accumulator, replacement).to_string(),
+        Replacing::General(regex, replacement) => {
+            let regex = match regex {
+                Ok(regex) => regex,
+                Err(error) => {
+                    debug!("error regex\nError: {error:?}");
+                    return accumulator;
+                },
+            };
+            regex.replace_all(&accumulator, replacement).to_string()
+        },
     })
-}
-
-async fn is_connected(context: &Context, guild_id: impl Into<GuildId>) -> bool {
-    let manager = get_manager(context).await.unwrap();
-    manager.get(guild_id.into()).is_some()
 }
 
 async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, is_bot_connected: bool) {
@@ -188,15 +220,18 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
         let text = format!("{name}さんが");
 
         let audio_generator = {
-            let voicevox = get_voicevox(context).await;
+            let Some(voicevox) = get_voicevox(context).await else {
+                error!("failed to get voicevox client");
+                return None;
+            };
             let voicevox = voicevox.lock().await;
             voicevox.audio_generator.clone()
         };
         let speaker = "1";
         let audio = match audio_generator.generate(speaker, &text).await {
             Ok(audio) => audio,
-            Err(why) => {
-                println!("Generating audio failed because of `{why}`");
+            Err(error) => {
+                error!("failed to generate audio\nError: {error:?}");
                 return None;
             },
         };

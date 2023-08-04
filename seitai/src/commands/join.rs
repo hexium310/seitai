@@ -2,6 +2,7 @@ use anyhow::Result;
 use serenity::{
     builder::{CreateCommand, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
+    futures::TryFutureExt,
     model::{application::CommandInteraction, Colour},
 };
 
@@ -42,7 +43,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     let call = manager.get_or_insert(guild.id);
 
     let mut call = call.lock().await;
-    call.deafen(true).await.unwrap();
+    call.deafen(true).await?;
 
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()
@@ -52,19 +53,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     );
     respond(context, interaction, message).await?;
 
-    match call.join(connect_to).await {
-        Ok(join) => {
-            match join.await {
-                Ok(_) => {},
-                Err(why) => {
-                    println!("err1: {why}");
-                },
-            };
-        },
-        Err(why) => {
-            println!("err2: {why}");
-        },
-    };
+    call.join(connect_to).and_then(|join| join).await?;
 
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()

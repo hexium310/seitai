@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context as _, Result};
 use indexmap::IndexMap;
 use regex_lite::Regex;
 use serenity::{
@@ -9,6 +9,7 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
+use tracing::{debug, error};
 use uuid::Uuid;
 use voicevox::dictionary::{
     response::{DeleteUserDictWordResult, GetUserDictResult, PostUserDictWordResult, PutUserDictWordResult},
@@ -21,15 +22,18 @@ use crate::{
 };
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
-    let guild_id = interaction.guild_id.unwrap();
+    let Some(guild_id) = interaction.guild_id else {
+        return Ok(());
+    };
     let users = guild_id
         .members(&context.http, None, None)
-        .await?
+        .await
+        .with_context(|| format!("failed to get list of guild ({guild_id}) members"))?
         .iter()
         .map(|member| member.user.clone())
         .collect::<Vec<_>>();
     let dictionary = {
-        let voicevox = get_voicevox(context).await;
+        let voicevox = get_voicevox(context).await.context("failed to get voicevox client")?;
         let voicevox = voicevox.lock().await;
         voicevox.dictionary.clone()
     };
@@ -38,10 +42,14 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
         subcommand_options.entry("surface".to_string()).and_modify(|word| {
             let text = normalize(context, &guild_id, &users, word);
-            *word = Regex::new(r"<:([\w_]+):\d+>")
-                .unwrap()
-                .replace_all(&text, ":$1:")
-                .to_string();
+            let regex = match Regex::new(r"<:([\w_]+):\d+>") {
+                Ok(regex) => regex,
+                Err(error) => {
+                    debug!("error regex\nError: {error:?}");
+                    return;
+                },
+            };
+            regex.replace_all(&text, ":$1:").to_string();
         });
 
         match option.name.as_str() {
@@ -54,14 +62,17 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     .and_modify(|pronunciation| {
                         *pronunciation = to_katakana(pronunciation);
                     });
-                let word = subcommand_options.get("surface").unwrap();
+                let word = subcommand_options
+                    .get("surface")
+                    .context("error: surface doesn't exists")?;
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
-                    Err(why) => {
+                    Err(error) => {
+                        error!("failed to register {word} into dictionary\nError: {error:?}");
                         let message = CreateInteractionResponseMessage::new().embed(
                             CreateEmbed::new()
                                 .title("単語の登録に失敗しました。")
-                                .field("詳細", format!("```\n{}\n```", why), false)
+                                .field("詳細", format!("```\n{}\n```", error), false)
                                 .colour(Colour::RED),
                         );
                         respond(context, interaction, message).await?;
@@ -78,7 +89,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             },
             // TODO: Paginate
             "list" => {
-                let GetUserDictResult::Ok(list) = dictionary.list().await?;
+                let GetUserDictResult::Ok(list) = dictionary.list().await.context("failed to get dictionary")?;
                 let words = list
                     .values()
                     .map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation))
@@ -92,14 +103,17 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 respond(context, interaction, message).await?;
             },
             "delete" => {
-                let word = subcommand_options.get("surface").unwrap();
+                let word = subcommand_options
+                    .get("surface")
+                    .context("error: surface doesn't exists")?;
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
-                    Err(why) => {
+                    Err(error) => {
+                        error!("failed to delete {word} in dictionary\nError: {error:?}");
                         let message = CreateInteractionResponseMessage::new().embed(
                             CreateEmbed::new()
                                 .title("単語の削除に失敗しました。")
-                                .field("詳細", format!("```\n{}\n```", why), false)
+                                .field("詳細", format!("```\n{}\n```", error), false)
                                 .colour(Colour::RED),
                         );
                         respond(context, interaction, message).await?;
@@ -203,13 +217,13 @@ fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, Strin
 }
 
 async fn get_regsiterd(dictionary: &Dictionary, word: &str) -> Result<Option<Uuid>> {
-    let GetUserDictResult::Ok(list) = dictionary.list().await?;
+    let GetUserDictResult::Ok(list) = dictionary.list().await.context("failed to get dictionary")?;
     let uuids = list
         .into_iter()
         .filter(|(_uuid, item)| item.surface == to_full_width(word))
         .collect::<IndexMap<_, _>>();
     if uuids.len() > 1 {
-        bail!("`{word}` is registered in more than one.");
+        bail!("error: {word} is registered in more than one");
     }
 
     Ok(uuids.into_keys().next())
@@ -221,8 +235,10 @@ async fn register_word(
     dictionary: &Dictionary,
     property: &HashMap<String, String>,
 ) -> Result<()> {
-    let word = property.get("surface").unwrap();
-    let pronunciation = property.get("pronunciation").unwrap();
+    let word = property.get("surface").context("error: surface doesn't exists")?;
+    let pronunciation = property
+        .get("pronunciation")
+        .context("error: pronunciation doesn't exists")?;
     let parameters = property
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -240,6 +256,7 @@ async fn register_word(
             respond(context, interaction, message).await?;
         },
         PostUserDictWordResult::UnprocessableEntity(error) => {
+            error!("failed to register {word} into dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の登録に失敗しました。")
@@ -260,8 +277,10 @@ async fn update_word(
     uuid: &Uuid,
     property: &HashMap<String, String>,
 ) -> Result<()> {
-    let word = property.get("surface").unwrap();
-    let pronunciation = property.get("pronunciation").unwrap();
+    let word = property.get("surface").context("error: surface doesn't exists")?;
+    let pronunciation = property
+        .get("pronunciation")
+        .context("error: pronunciation doesn't exists")?;
     let parameters = property
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -279,6 +298,7 @@ async fn update_word(
             respond(context, interaction, message).await?;
         },
         PutUserDictWordResult::UnprocessableEntity(error) => {
+            error!("failed to update {word} in dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の更新に失敗しました。")
@@ -299,7 +319,7 @@ async fn delete_word(
     uuid: &Uuid,
     property: &HashMap<String, String>,
 ) -> Result<()> {
-    let word = property.get("surface").unwrap();
+    let word = property.get("surface").context("error: surface doesn't exists")?;
 
     match dictionary.delete_word(uuid).await? {
         DeleteUserDictWordResult::NoContent => {
@@ -312,6 +332,7 @@ async fn delete_word(
             respond(context, interaction, message).await?;
         },
         DeleteUserDictWordResult::UnprocessableEntity(error) => {
+            error!("failed to delete {word} in dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の削除に失敗しました。")
