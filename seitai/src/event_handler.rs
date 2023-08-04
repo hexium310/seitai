@@ -138,7 +138,7 @@ impl EventHandler for Handler {
         let is_bot_connected = new_state.user_id == bot_id;
         let is_connected_bot_at = new_state.channel_id == channel_id_bot_at;
 
-        if !is_disconnected && newly_connected && is_bot_connected || is_connected_bot_at {
+        if !is_disconnected && newly_connected && (is_bot_connected || is_connected_bot_at) {
             handle_connect(&context, &new_state, &mut call, is_bot_connected).await;
             return;
         }
