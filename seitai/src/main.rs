@@ -87,7 +87,13 @@ async fn main() {
                 exit(1);
             },
         };
-        let voicevox = Voicevox::new(&voicevox_host);
+        let voicevox = match Voicevox::build(&voicevox_host) {
+            Ok(voicevox) => voicevox,
+            Err(error) => {
+                error!("failed to build voicevox client\nError: {error:?}");
+                exit(1);
+            },
+        };
         data.insert::<VoicevoxClient>(Arc::new(Mutex::new(voicevox)));
     }
 

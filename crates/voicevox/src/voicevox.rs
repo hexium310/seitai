@@ -1,3 +1,4 @@
+use anyhow::Result;
 use url::Url;
 
 use crate::{audio::AudioGenerator, dictionary::Dictionary};
@@ -8,15 +9,15 @@ pub struct Voicevox {
 }
 
 impl Voicevox {
-    pub fn new(host: &str) -> Self {
-        let base = Url::parse(&format!("http://{host}:50021")).unwrap();
+    pub fn build(host: &str) -> Result<Self> {
+        let base = Url::parse(&format!("http://{host}:50021"))?;
 
-        Self {
+        Ok(Self {
             audio_generator: AudioGenerator {
                 base: base.clone(),
                 default_speed: 1.2,
             },
             dictionary: Dictionary { base: base.clone() },
-        }
+        })
     }
 }

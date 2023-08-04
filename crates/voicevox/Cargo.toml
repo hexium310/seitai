@@ -24,6 +24,12 @@ features = ["derive"]
 [dependencies.serde_json]
 version = "1.0.103"
 
+[dependencies.tracing]
+workspace = true
+
+[dependencies.tracing-subscriber]
+workspace = true
+
 [dependencies.uuid]
 workspace = true
 

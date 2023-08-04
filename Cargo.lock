@@ -2791,6 +2791,8 @@ dependencies = [
  "indexmap 2.0.0",
  "serde",
  "serde_json",
+ "tracing",
+ "tracing-subscriber",
  "url",
  "uuid",
 ]

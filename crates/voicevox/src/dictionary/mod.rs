@@ -1,6 +1,6 @@
 pub mod response;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use hyper::{Body, StatusCode};
 use url::Url;
 use uuid::Uuid;
@@ -24,7 +24,7 @@ impl Dictionary {
         let (status, bytes) = self.get("user_dict", &[]).await?;
         match status {
             StatusCode::OK => Ok(GetUserDictResult::Ok(serde_json::from_slice(&bytes)?)),
-            _ => unreachable!(),
+            _ => bail!("error: unexpected status code"),
         }
     }
 
@@ -37,7 +37,7 @@ impl Dictionary {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PostUserDictWordResult::UnprocessableEntity(
                 serde_json::from_slice(&bytes)?,
             )),
-            _ => unreachable!(),
+            _ => bail!("error: unexpected status code"),
         }
     }
 
@@ -50,7 +50,7 @@ impl Dictionary {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PutUserDictWordResult::UnprocessableEntity(serde_json::from_slice(
                 &bytes,
             )?)),
-            _ => unreachable!(),
+            _ => bail!("error: unexpected status code"),
         }
     }
 
@@ -63,7 +63,7 @@ impl Dictionary {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(DeleteUserDictWordResult::UnprocessableEntity(
                 serde_json::from_slice(&bytes)?,
             )),
-            _ => unreachable!(),
+            _ => bail!("error: unexpected status code"),
         }
     }
 }
