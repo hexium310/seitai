@@ -7,7 +7,7 @@ use serenity::{
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 use crate::{
     commands,
@@ -82,7 +82,7 @@ impl EventHandler for Handler {
         }
     }
 
-    #[tracing::instrument(skip(self, context))]
+    #[instrument(skip(self, context))]
     async fn ready(&self, context: Context, ready: Ready) {
         info!("{} is ready", ready.user.name);
 

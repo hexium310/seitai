@@ -2,7 +2,6 @@ use anyhow::Result;
 use serenity::{
     builder::{CreateCommand, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
-    futures::TryFutureExt,
     model::{application::CommandInteraction, Colour},
 };
 
@@ -53,7 +52,8 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     );
     respond(context, interaction, message).await?;
 
-    call.join(connect_to).and_then(|join| join).await?;
+    let join = call.join(connect_to).await?;
+    join.await?;
 
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()
