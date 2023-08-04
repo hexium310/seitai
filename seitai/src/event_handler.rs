@@ -7,7 +7,7 @@ use serenity::{
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
-use tracing::{debug, error, info, instrument};
+use tracing::instrument;
 use voicevox::audio::AudioGenerator;
 
 use crate::{
@@ -36,7 +36,7 @@ impl EventHandler for Handler {
             .with_context(|| format!("failed to execute /{}", command.data.name));
 
             if let Err(error) = result {
-                error!("error handling slash command\nError: {error:?}");
+                tracing::error!("error handling slash command\nError: {error:?}");
             }
         }
     }
@@ -53,7 +53,7 @@ impl EventHandler for Handler {
         let manager = match get_manager(&context).await {
             Ok(manager) => manager,
             Err(error) => {
-                error!("{error:?}");
+                tracing::error!("{error:?}");
                 return;
             },
         };
@@ -68,7 +68,7 @@ impl EventHandler for Handler {
 
         let audio_generator = {
             let Some(voicevox) = get_voicevox(&context).await else {
-                error!("failed to get voicevox client to handle message");
+                tracing::error!("failed to get voicevox client to handle message");
                 return;
             };
             let voicevox = voicevox.lock().await;
@@ -86,7 +86,7 @@ impl EventHandler for Handler {
                     call.enqueue_input(input).await;
                 },
                 Err(error) => {
-                    error!("failed to get audio source\nError: {error:?}");
+                    tracing::error!("failed to get audio source\nError: {error:?}");
                 },
             };
         }
@@ -94,7 +94,7 @@ impl EventHandler for Handler {
 
     #[instrument(skip(self, context))]
     async fn ready(&self, context: Context, ready: Ready) {
-        info!("{} is ready", ready.user.name);
+        tracing::info!("{} is ready", ready.user.name);
 
         for guild in ready.guilds {
             let commands = guild
@@ -111,7 +111,7 @@ impl EventHandler for Handler {
                 .await;
 
             if let Err(error) = commands {
-                error!("failed to regeister slash commands\nError: {error:?}");
+                tracing::error!("failed to regeister slash commands\nError: {error:?}");
             }
         }
     }
@@ -124,7 +124,7 @@ impl EventHandler for Handler {
         let manager = match get_manager(&context).await {
             Ok(manager) => manager,
             Err(error) => {
-                error!("{error:?}");
+                tracing::error!("{error:?}");
                 return;
             },
         };
@@ -199,7 +199,7 @@ fn replace_message(context: &Context, message: &Message) -> String {
             let regex = match regex {
                 Ok(regex) => regex,
                 Err(error) => {
-                    debug!("error regex\nError: {error:?}");
+                    tracing::debug!("error regex\nError: {error:?}");
                     return accumulator;
                 },
             };
@@ -225,7 +225,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
 
         let audio_generator = {
             let Some(voicevox) = get_voicevox(context).await else {
-                error!("failed to get voicevox client to handle connect");
+                tracing::error!("failed to get voicevox client to handle connect");
                 return None;
             };
             let voicevox = voicevox.lock().await;
@@ -235,7 +235,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
         let audio = match audio_generator.generate(speaker, &text).await {
             Ok(audio) => audio,
             Err(error) => {
-                error!("failed to generate audio\nError: {error:?}");
+                tracing::error!("failed to generate audio\nError: {error:?}");
                 return None;
             },
         };

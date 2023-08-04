@@ -11,7 +11,7 @@ use serenity::{
     model::gateway::Ready,
 };
 use tokio::sync::Notify;
-use tracing::{error, info, instrument};
+use tracing::instrument;
 
 use crate::Data;
 
@@ -21,10 +21,10 @@ pub struct Handler;
 impl EventHandler for Handler {
     #[instrument(skip(self, context))]
     async fn ready(&self, context: Context, ready: Ready) {
-        info!("{} is ready", ready.user.name);
+        tracing::info!("{} is ready", ready.user.name);
 
         let Some(data) = get_data(&context).await else {
-            error!("failed to get data");
+            tracing::error!("failed to get data");
             return;
         };
         data.lock().await.bot_id = ready.user.id;
@@ -32,7 +32,7 @@ impl EventHandler for Handler {
 
     async fn voice_state_update(&self, context: Context, _old: Option<VoiceState>, new: VoiceState) {
         let Some(data) = get_data(&context).await else {
-            error!("failed to get data");
+            tracing::error!("failed to get data");
             return;
         };
         let mut data = data.lock().await;
@@ -61,7 +61,7 @@ async fn get_data(context: &Context) -> Option<Arc<Mutex<Data>>> {
 
 async fn wait_restart(context: &Context) {
     let Some(data) = get_data(context).await else {
-        error!("failed to get data");
+        tracing::error!("failed to get data");
         return;
     };
 
@@ -75,13 +75,13 @@ async fn wait_restart(context: &Context) {
         tokio::select! {
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(300)) => {
                 if let Err(error) = restart().await {
-                    error!("failed to restart statefulsets/voicevox\nError: {error:?}");
+                    tracing::error!("failed to restart statefulsets/voicevox\nError: {error:?}");
                     return;
                 }
-                info!("succeeded in restarting statefulsets/voicevox");
+                tracing::info!("succeeded in restarting statefulsets/voicevox");
             },
             _ = cancellation.notified() => {
-                info!("canceled restarting statefulsets/voicevox");
+                tracing::info!("canceled restarting statefulsets/voicevox");
             },
         }
     });

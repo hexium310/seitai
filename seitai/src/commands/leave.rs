@@ -4,7 +4,6 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
-use tracing::error;
 
 use crate::utils::{get_guild, get_manager, respond};
 
@@ -33,7 +32,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             respond(context, interaction, message).await?;
         },
         Err(error) => {
-            error!("failed to disconnect from voice channel\nError: {error:?}");
+            tracing::error!("failed to disconnect from voice channel\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .description("ボイスチャンネルからの切断に失敗しました。")

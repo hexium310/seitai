@@ -1,5 +1,4 @@
 use regex_lite::Regex;
-use tracing::debug;
 
 const HALF_GRAPHICAL_BEGIN: u32 = '!' as u32;
 const HALF_GRAPHICAL_END: u32 = '~' as u32;
@@ -25,7 +24,7 @@ pub(crate) fn to_half_width(text: &str) -> String {
     let regex = match Regex::new(r"\u3000") {
         Ok(regex) => regex,
         Err(error) => {
-            debug!("error regex\nError: {error:?}");
+            tracing::debug!("error regex\nError: {error:?}");
             return text.to_string();
         },
     };

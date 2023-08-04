@@ -8,7 +8,6 @@ use serenity::{
     prelude::TypeMapKey,
 };
 use tokio::sync::Notify;
-use tracing::error;
 
 use crate::logging::initialize_logging;
 
@@ -32,7 +31,7 @@ async fn main() {
     let token = match env::var("DISCORD_TOKEN") {
         Ok(token) => token,
         Err(error) => {
-            error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
+            tracing::error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
             exit(1);
         },
     };
@@ -44,7 +43,7 @@ async fn main() {
     {
         Ok(client) => client,
         Err(error) => {
-            error!("error creating serenity client\nError: {error:?}");
+            tracing::error!("error creating serenity client\nError: {error:?}");
             exit(1);
         },
     };
@@ -60,7 +59,7 @@ async fn main() {
     }
 
     if let Err(error) = client.start().await {
-        error!("error starting client\nError: {error:?}");
+        tracing::error!("error starting client\nError: {error:?}");
         exit(1);
     }
 }

@@ -8,7 +8,6 @@ use songbird::{
     input::{cached::Compressed, File},
     SerenityInit,
 };
-use tracing::error;
 use voicevox::Voicevox;
 
 mod character_converter;
@@ -36,7 +35,7 @@ async fn main() {
     let token = match env::var("DISCORD_TOKEN") {
         Ok(token) => token,
         Err(error) => {
-            error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
+            tracing::error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
             exit(1);
         },
     };
@@ -49,7 +48,7 @@ async fn main() {
     {
         Ok(client) => client,
         Err(error) => {
-            error!("error creating serenity client\nError: {error:?}");
+            tracing::error!("error creating serenity client\nError: {error:?}");
             exit(1);
         },
     };
@@ -71,7 +70,7 @@ async fn main() {
             let audio = match set_up_audio(path).await {
                 Ok(audio) => audio,
                 Err(error) => {
-                    error!("failed to set up audio {path}\nError: {error:?}");
+                    tracing::error!("failed to set up audio {path}\nError: {error:?}");
                     continue;
                 },
             };
@@ -83,14 +82,14 @@ async fn main() {
         let voicevox_host = match env::var("VOICEVOX_HOST") {
             Ok(voicevox_host) => voicevox_host,
             Err(error) => {
-                error!("failed to fetch environment variable VOICEVOX_HOST\nError: {error:?}");
+                tracing::error!("failed to fetch environment variable VOICEVOX_HOST\nError: {error:?}");
                 exit(1);
             },
         };
         let voicevox = match Voicevox::build(&voicevox_host) {
             Ok(voicevox) => voicevox,
             Err(error) => {
-                error!("failed to build voicevox client\nError: {error:?}");
+                tracing::error!("failed to build voicevox client\nError: {error:?}");
                 exit(1);
             },
         };
@@ -98,7 +97,7 @@ async fn main() {
     }
 
     if let Err(error) = client.start().await {
-        error!("error starting client\nError: {error:?}");
+        tracing::error!("error starting client\nError: {error:?}");
         exit(1);
     }
 }

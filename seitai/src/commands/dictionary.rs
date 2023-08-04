@@ -9,7 +9,6 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
-use tracing::{debug, error};
 use uuid::Uuid;
 use voicevox::dictionary::{
     response::{DeleteUserDictWordResult, GetUserDictResult, PostUserDictWordResult, PutUserDictWordResult},
@@ -47,7 +46,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             let regex = match Regex::new(r"<:([\w_]+):\d+>") {
                 Ok(regex) => regex,
                 Err(error) => {
-                    debug!("error regex\nError: {error:?}");
+                    tracing::debug!("error regex\nError: {error:?}");
                     return;
                 },
             };
@@ -70,7 +69,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(error) => {
-                        error!("failed to register {word} into dictionary\nError: {error:?}");
+                        tracing::error!("failed to register {word} into dictionary\nError: {error:?}");
                         let message = CreateInteractionResponseMessage::new().embed(
                             CreateEmbed::new()
                                 .title("単語の登録に失敗しました。")
@@ -114,7 +113,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(error) => {
-                        error!("failed to delete {word} in dictionary\nError: {error:?}");
+                        tracing::error!("failed to delete {word} in dictionary\nError: {error:?}");
                         let message = CreateInteractionResponseMessage::new().embed(
                             CreateEmbed::new()
                                 .title("単語の削除に失敗しました。")
@@ -266,7 +265,7 @@ async fn register_word(
             respond(context, interaction, message).await?;
         },
         PostUserDictWordResult::UnprocessableEntity(error) => {
-            error!("failed to register {word} into dictionary\nError: {error:?}");
+            tracing::error!("failed to register {word} into dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の登録に失敗しました。")
@@ -310,7 +309,7 @@ async fn update_word(
             respond(context, interaction, message).await?;
         },
         PutUserDictWordResult::UnprocessableEntity(error) => {
-            error!("failed to update {word} in dictionary\nError: {error:?}");
+            tracing::error!("failed to update {word} in dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の更新に失敗しました。")
@@ -342,7 +341,7 @@ async fn delete_word(
             respond(context, interaction, message).await?;
         },
         DeleteUserDictWordResult::UnprocessableEntity(error) => {
-            error!("failed to delete {word} in dictionary\nError: {error:?}");
+            tracing::error!("failed to delete {word} in dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の削除に失敗しました。")
