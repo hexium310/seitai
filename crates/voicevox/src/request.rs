@@ -1,4 +1,4 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use hyper::{body::Bytes, Body, Client as HttpClient, Request as _Request, StatusCode};
 use url::Url;
@@ -9,7 +9,9 @@ pub trait Request: Send + Sync {
 
     async fn get(&self, endpoint: &str, parameters: &[(&str, &str)]) -> Result<(StatusCode, Bytes)> {
         let url = self.url(endpoint, parameters);
-        let req = _Request::get(url.as_str()).body(Body::empty()).with_context(|| format!("failed to request with GET {url}"))?;
+        let req = _Request::get(url.as_str())
+            .body(Body::empty())
+            .with_context(|| format!("failed to request with GET {url}"))?;
         request(req).await
     }
 
@@ -24,14 +26,16 @@ pub trait Request: Send + Sync {
 
     async fn put(&self, endpoint: &str, parameters: &[(&str, &str)], body: Body) -> Result<(StatusCode, Bytes)> {
         let url = self.url(endpoint, parameters);
-        let req = _Request::put(url.as_str()).body(body)
+        let req = _Request::put(url.as_str())
+            .body(body)
             .with_context(|| format!("failed to request with PUT {url}"))?;
         request(req).await
     }
 
     async fn delete(&self, endpoint: &str, parameters: &[(&str, &str)], body: Body) -> Result<(StatusCode, Bytes)> {
         let url = self.url(endpoint, parameters);
-        let req = _Request::delete(url.as_str()).body(body)
+        let req = _Request::delete(url.as_str())
+            .body(body)
             .with_context(|| format!("failed to request with DELETE {url}"))?;
         request(req).await
     }

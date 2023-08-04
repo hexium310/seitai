@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::{Api, Client, Config};
 use serenity::{
@@ -11,7 +11,7 @@ use serenity::{
     model::gateway::Ready,
 };
 use tokio::sync::Notify;
-use tracing::{instrument, info, error};
+use tracing::{error, info, instrument};
 
 use crate::Data;
 
@@ -23,7 +23,7 @@ impl EventHandler for Handler {
     async fn ready(&self, context: Context, ready: Ready) {
         info!("{} is ready", ready.user.name);
 
-        let Some(data) =  get_data(&context).await else{
+        let Some(data) = get_data(&context).await else {
             error!("failed to get data");
             return;
         };
@@ -31,7 +31,7 @@ impl EventHandler for Handler {
     }
 
     async fn voice_state_update(&self, context: Context, _old: Option<VoiceState>, new: VoiceState) {
-        let Some(data) =  get_data(&context).await else{
+        let Some(data) = get_data(&context).await else {
             error!("failed to get data");
             return;
         };
@@ -60,7 +60,7 @@ async fn get_data(context: &Context) -> Option<Arc<Mutex<Data>>> {
 }
 
 async fn wait_restart(context: &Context) {
-    let Some(data) =  get_data(context).await else{
+    let Some(data) = get_data(context).await else {
         error!("failed to get data");
         return;
     };

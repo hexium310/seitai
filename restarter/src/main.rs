@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Arc, process::exit};
+use std::{collections::HashMap, env, process::exit, sync::Arc};
 
 use serenity::{
     all::{ChannelId, GuildId, UserId},
