@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc, process::exit};
 
 use serenity::{
     all::{ChannelId, GuildId, UserId},
@@ -8,8 +8,12 @@ use serenity::{
     prelude::TypeMapKey,
 };
 use tokio::sync::Notify;
+use tracing::error;
+
+use crate::logging::initialize_logging;
 
 mod event_handler;
+mod logging;
 
 struct Data {
     bot_id: UserId,
@@ -23,13 +27,27 @@ impl TypeMapKey for Data {
 
 #[tokio::main]
 async fn main() {
-    let token = env::var("DISCORD_TOKEN").expect("`DISCORD_TOKEN` is not set.");
+    initialize_logging();
+
+    let token = match env::var("DISCORD_TOKEN") {
+        Ok(token) => token,
+        Err(error) => {
+            error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
+            exit(1);
+        },
+    };
 
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
-    let mut client = Client::builder(token, intents)
+    let mut client = match Client::builder(token, intents)
         .event_handler(event_handler::Handler)
         .await
-        .expect("Error creating client");
+    {
+        Ok(client) => client,
+        Err(error) => {
+            error!("error creating serenity client\nError: {error:?}");
+            exit(1);
+        },
+    };
 
     {
         let mut data = client.data.write().await;
@@ -41,7 +59,8 @@ async fn main() {
         })));
     }
 
-    if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
+    if let Err(error) = client.start().await {
+        error!("error starting client\nError: {error:?}");
+        exit(1);
     }
 }

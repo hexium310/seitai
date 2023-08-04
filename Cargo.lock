@@ -1554,7 +1554,10 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "serenity",
+ "time",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
