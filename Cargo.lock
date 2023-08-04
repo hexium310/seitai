@@ -1759,7 +1759,7 @@ dependencies = [
 
 [[package]]
 name = "seitai"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "indexmap 2.0.0",
