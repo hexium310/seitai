@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc, process::exit};
 
 use serenity::{
     all::{ChannelId, GuildId, UserId},
@@ -7,7 +7,7 @@ use serenity::{
     model::gateway::GatewayIntents,
     prelude::TypeMapKey,
 };
-use tokio::sync::Notify;
+use tokio::{sync::Notify, signal::unix::{signal, SignalKind}};
 
 mod event_handler;
 
@@ -41,7 +41,24 @@ async fn main() {
         })));
     }
 
-    if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
+    tokio::spawn(async move {
+        if let Err(why) = client.start().await {
+            println!("Client error: {why:?}");
+            exit(1);
+        }
+    });
+
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+
+    tokio::select! {
+        _ = sigint.recv() => {
+            println!("received SIGINT, shutting down");
+            exit(130);
+        },
+        _ = sigterm.recv() => {
+            println!("received SIGTERM, shutting down");
+            exit(143);
+        },
     }
 }

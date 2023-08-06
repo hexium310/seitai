@@ -18,7 +18,7 @@ features = ["builtin-queue"]
 
 [workspace.dependencies.tokio]
 version = "1.28.2"
-features = ["macros", "net", "rt-multi-thread"]
+features = ["macros", "net", "rt-multi-thread", "signal"]
 
 [workspace.dependencies.uuid]
 version = "1.4.1"
