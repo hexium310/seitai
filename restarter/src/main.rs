@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc};
 
+use logging::initialize_logging;
 use serenity::{
     all::{ChannelId, GuildId, UserId},
     client::Client,
@@ -9,10 +10,7 @@ use serenity::{
 };
 use tokio::sync::Notify;
 
-use crate::logging::initialize_logging;
-
 mod event_handler;
-mod logging;
 
 struct Data {
     bot_id: UserId,

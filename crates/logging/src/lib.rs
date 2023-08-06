@@ -1,7 +1,7 @@
 use time::macros::format_description;
 use tracing_subscriber::{fmt::time::LocalTime, EnvFilter};
 
-pub(crate) fn initialize_logging() {
+pub fn initialize_logging() {
     let local_timer = LocalTime::new(format_description!(
         "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]+[offset_hour]:[offset_minute]"
     ));

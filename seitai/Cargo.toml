@@ -14,6 +14,9 @@ features = ["serde"]
 version = "3.0.1"
 features = ["lite"]
 
+[dependencies.logging]
+workspace = true
+
 [dependencies.regex-lite]
 version = "0.1.0"
 
@@ -28,16 +31,10 @@ workspace = true
 version = "0.5.2"
 features = ["wav"]
 
-[dependencies.time]
-workspace = true
-
 [dependencies.tokio]
 workspace = true
 
 [dependencies.tracing]
-workspace = true
-
-[dependencies.tracing-subscriber]
 workspace = true
 
 [dependencies.uuid]

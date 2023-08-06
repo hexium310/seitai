@@ -1028,6 +1028,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 
 [[package]]
+name = "logging"
+version = "0.0.0"
+dependencies = [
+ "time",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "loom"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1589,11 +1597,10 @@ dependencies = [
  "anyhow",
  "k8s-openapi",
  "kube",
+ "logging",
  "serenity",
- "time",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1821,14 +1828,13 @@ dependencies = [
  "anyhow",
  "indexmap 2.0.0",
  "lazy-regex",
+ "logging",
  "regex-lite",
  "serenity",
  "songbird",
  "symphonia",
- "time",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "uuid",
  "voicevox",
 ]
@@ -2830,7 +2836,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
- "tracing-subscriber",
  "url",
  "uuid",
 ]

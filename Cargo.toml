@@ -5,6 +5,9 @@ default-members = ["seitai"]
 [workspace.dependencies.anyhow]
 version = "1.0.71"
 
+[workspace.dependencies.logging]
+path = "crates/logging"
+
 [workspace.dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity.git"
 branch = "next"
@@ -16,20 +19,12 @@ git = "https://github.com/serenity-rs/songbird.git"
 branch = "next"
 features = ["builtin-queue"]
 
-[workspace.dependencies.time]
-version = "0.3.25"
-features = ["macros"]
-
 [workspace.dependencies.tokio]
 version = "1.28.2"
 features = ["macros", "net", "rt-multi-thread"]
 
 [workspace.dependencies.tracing]
 version = "0.1.37"
-
-[workspace.dependencies.tracing-subscriber]
-version = "0.3.17"
-features = ["local-time"]
 
 [workspace.dependencies.uuid]
 version = "1.4.1"

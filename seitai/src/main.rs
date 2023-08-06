@@ -13,7 +13,6 @@ use voicevox::Voicevox;
 mod character_converter;
 mod commands;
 mod event_handler;
-mod logging;
 mod regex;
 mod utils;
 
