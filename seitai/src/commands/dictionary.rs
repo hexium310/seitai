@@ -59,6 +59,9 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     .entry("accent_type".to_string())
                     .or_insert("0".to_string());
                 subcommand_options
+                    .entry("priority".to_string())
+                    .or_insert("8".to_string());
+                subcommand_options
                     .entry("pronunciation".to_string())
                     .and_modify(|pronunciation| {
                         *pronunciation = to_katakana(pronunciation);

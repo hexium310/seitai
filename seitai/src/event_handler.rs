@@ -1,7 +1,7 @@
 use anyhow::{Context as _, Result};
 use regex_lite::Regex;
 use serenity::{
-    all::{ChannelId as SerenityChannelId, UserId as SerenityUserId, VoiceState},
+    all::{ChannelId as SerenityChannelId, ChannelType, VoiceState},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
@@ -131,26 +131,64 @@ impl EventHandler for Handler {
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        let Some(connection) = call.current_connection() else {
-            return;
+        let bot_id = match context.http.get_current_user().await {
+            Ok(bot) => bot.id,
+            Err(error) => {
+                tracing::error!("failed to get current user on voice state update\nError: {error:?}");
+                return;
+            },
         };
+        let is_bot_connected = new_state.user_id == bot_id;
+        if is_bot_connected {
+            return;
+        }
 
-        let channel_id_bot_at = connection
-            .channel_id
+        let channel_id_bot_at = call
+            .current_channel()
             .map(|channel_id| SerenityChannelId::from(channel_id.0));
-        let bot_id = SerenityUserId::from(connection.user_id.0);
-
         let is_disconnected = new_state.channel_id.is_none();
         let newly_connected = match &old_state {
             Some(old_state) => old_state.channel_id != new_state.channel_id,
             None => true,
         };
-        let is_bot_connected = new_state.user_id == bot_id;
         let is_connected_bot_at = new_state.channel_id == channel_id_bot_at;
 
-        if !is_disconnected && newly_connected && (is_bot_connected || is_connected_bot_at) {
+        if !is_disconnected && newly_connected && is_connected_bot_at {
             handle_connect(&context, &new_state, &mut call, is_bot_connected).await;
             return;
+        }
+
+        if let Some(channel_id_bot_at) = channel_id_bot_at {
+            let channel = match channel_id_bot_at.to_channel(&context.http).await {
+                Ok(channel) => channel.guild(),
+                Err(error) => {
+                    tracing::error!("failed to get channel {channel_id_bot_at} to check alone\nError: {error:?}");
+                    return;
+                },
+            };
+            let Some(channel) = channel else {
+                return;
+            };
+            if channel.kind != ChannelType::Voice {
+                return;
+            }
+            let members = match channel.members(&context.cache) {
+                Ok(members) => members,
+                Err(error) => {
+                    tracing::error!("failed to get members in channel {channel_id_bot_at} to check alone\nError: {error:?}");
+                    return;
+                },
+            };
+            let ids = members.iter().map(|v| v.user.id).collect::<Vec<_>>();
+            let is_alone = ids != vec![bot_id];
+            if is_alone {
+                return;
+            }
+
+            if let Err(error) = call.leave().await {
+                tracing::error!("failed to leave when bot is alone in voice channel\n:Error {error:?}");
+                return;
+            };
         }
     }
 }
