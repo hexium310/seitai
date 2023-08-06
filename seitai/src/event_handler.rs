@@ -36,7 +36,7 @@ impl EventHandler for Handler {
             .with_context(|| format!("failed to execute /{}", command.data.name));
 
             if let Err(error) = result {
-                tracing::error!("error handling slash command\nError: {error:?}");
+                tracing::error!("failed to handle slash command\nError: {error:?}");
             }
         }
     }

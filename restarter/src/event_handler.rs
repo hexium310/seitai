@@ -91,7 +91,7 @@ async fn restart() -> Result<()> {
     let config = match Config::incluster() {
         Ok(config) => config,
         Err(_) => {
-            bail!("error: this app is not running in cluster of Kubernetes");
+            bail!("this app is not running in cluster of Kubernetes");
         },
     };
     let client = Client::try_from(config)?;

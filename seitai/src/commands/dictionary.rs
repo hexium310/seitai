@@ -65,7 +65,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     });
                 let word = subcommand_options
                     .get("surface")
-                    .context("error: there is no surface to make sure whether word is regsitered")?;
+                    .context("there is no surface to make sure whether word is regsitered")?;
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(error) => {
@@ -109,7 +109,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             "delete" => {
                 let word = subcommand_options
                     .get("surface")
-                    .context("error: there is no surface to delete word")?;
+                    .context("there is no surface to delete word")?;
                 let uuid = match get_regsiterd(&dictionary, word).await {
                     Ok(uuid) => uuid,
                     Err(error) => {
@@ -230,7 +230,7 @@ async fn get_regsiterd(dictionary: &Dictionary, word: &str) -> Result<Option<Uui
         .filter(|(_uuid, item)| item.surface == to_full_width(word))
         .collect::<IndexMap<_, _>>();
     if uuids.len() > 1 {
-        bail!("error: {word} is registered in more than one");
+        bail!("{word} is registered in more than one");
     }
 
     Ok(uuids.into_keys().next())
@@ -244,10 +244,10 @@ async fn register_word(
 ) -> Result<()> {
     let word = property
         .get("surface")
-        .context("error: there is no surface to register word")?;
+        .context("there is no surface to register word")?;
     let pronunciation = property
         .get("pronunciation")
-        .context("error: there is no pronunciation to register word")?;
+        .context("there is no pronunciation to register word")?;
     let parameters = property
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -288,10 +288,10 @@ async fn update_word(
 ) -> Result<()> {
     let word = property
         .get("surface")
-        .context("error: there is no surface to update word")?;
+        .context("there is no surface to update word")?;
     let pronunciation = property
         .get("pronunciation")
-        .context("error: there is no pronunciation to update word")?;
+        .context("there is no pronunciation to update word")?;
     let parameters = property
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))

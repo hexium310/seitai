@@ -43,7 +43,7 @@ async fn main() {
     {
         Ok(client) => client,
         Err(error) => {
-            tracing::error!("error creating serenity client\nError: {error:?}");
+            tracing::error!("failed to build serenity client\nError: {error:?}");
             exit(1);
         },
     };
@@ -59,7 +59,7 @@ async fn main() {
     }
 
     if let Err(error) = client.start().await {
-        tracing::error!("error starting client\nError: {error:?}");
+        tracing::error!("failed to start client\nError: {error:?}");
         exit(1);
     }
 }

@@ -20,7 +20,7 @@ use crate::{SoundStore, VoicevoxClient};
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)
         .await
-        .context("error getting songbird voice client: it placed in at initialisation")
+        .context("failed to get songbird voice client: it placed in at initialisation")
 }
 
 pub(crate) fn get_guild(context: &Context, interaction: &CommandInteraction) -> Option<Guild> {

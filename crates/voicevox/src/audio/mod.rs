@@ -49,7 +49,7 @@ impl AudioGenerator {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PostAudioQueryResult::UnprocessableEntity(serde_json::from_slice(
                 &bytes,
             )?)),
-            code => bail!("error: receiving unexpected {code} from POST audio_query"),
+            code => bail!("received unexpected {code} from POST audio_query"),
         }
     }
 
@@ -62,7 +62,7 @@ impl AudioGenerator {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PostSynthesisResult::UnprocessableEntity(serde_json::from_slice(
                 &bytes,
             )?)),
-            code => bail!("error: receiving unexpected {code} from POST synthesis"),
+            code => bail!("received unexpected {code} from POST synthesis"),
         }
     }
 

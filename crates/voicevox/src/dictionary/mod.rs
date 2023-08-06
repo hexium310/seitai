@@ -24,7 +24,7 @@ impl Dictionary {
         let (status, bytes) = self.get("user_dict", &[]).await?;
         match status {
             StatusCode::OK => Ok(GetUserDictResult::Ok(serde_json::from_slice(&bytes)?)),
-            code => bail!("error: receiving unexpected {code} from GET user_dict"),
+            code => bail!("received unexpected {code} from GET user_dict"),
         }
     }
 
@@ -37,7 +37,7 @@ impl Dictionary {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PostUserDictWordResult::UnprocessableEntity(
                 serde_json::from_slice(&bytes)?,
             )),
-            code => bail!("error: receiving unexpected {code} from POST user_dict_word"),
+            code => bail!("received unexpected {code} from POST user_dict_word"),
         }
     }
 
@@ -50,7 +50,7 @@ impl Dictionary {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PutUserDictWordResult::UnprocessableEntity(serde_json::from_slice(
                 &bytes,
             )?)),
-            code => bail!("error: receiving unexpected {code} from PUT user_dict_word"),
+            code => bail!("received unexpected {code} from PUT user_dict_word"),
         }
     }
 
@@ -63,7 +63,7 @@ impl Dictionary {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(DeleteUserDictWordResult::UnprocessableEntity(
                 serde_json::from_slice(&bytes)?,
             )),
-            code => bail!("error: receiving unexpected {code} from DELETE user_dict_word"),
+            code => bail!("received unexpected {code} from DELETE user_dict_word"),
         }
     }
 }
