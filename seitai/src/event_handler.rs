@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use regex_lite::Regex;
+use lazy_regex::{Lazy, Regex};
 use serenity::{
     all::{ChannelId as SerenityChannelId, ChannelType, VoiceState},
     async_trait,
@@ -12,6 +12,7 @@ use voicevox::audio::AudioGenerator;
 
 use crate::{
     commands,
+    regex,
     utils::{get_cached_audio, get_manager, get_voicevox, normalize},
 };
 
@@ -19,7 +20,7 @@ use crate::{
 pub struct Handler;
 
 enum Replacing {
-    General(std::result::Result<Regex, regex_lite::Error>, String),
+    General(&'static Lazy<Regex>, &'static str),
 }
 
 #[async_trait]
@@ -216,31 +217,24 @@ fn replace_message(context: &Context, message: &Message) -> String {
         return message.content.clone();
     };
 
-    let replacings = vec![
+    let replacings = [
         Replacing::General(
-            Regex::new(r"(?:`[^`]+`|```[^`]+```)"),
-            "\n{{seitai::replacement::CODE}}\n".to_string(),
+            &regex::CODE,
+            "\n{{seitai::replacement::CODE}}\n",
         ),
         Replacing::General(
-            Regex::new(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+"),
-            "\n{{seitai::replacement::URL}}\n".to_string(),
+            &regex::URL,
+            "\n{{seitai::replacement::URL}}\n",
         ),
-        Replacing::General(Regex::new(r"[wｗ]{2,}"), "ワラワラ".to_string()),
-        Replacing::General(Regex::new(r"[wｗ]$"), "ワラ".to_string()),
-        Replacing::General(Regex::new(r"。"), "。\n".to_string()),
-        Replacing::General(Regex::new(r"<:([\w_]+):\d+>"), ":$1:".to_string()),
+        Replacing::General(&regex::WW, "ワラワラ"),
+        Replacing::General(&regex::W, "ワラ"),
+        Replacing::General(&regex::IDEOGRAPHIC_FULL_STOP, "。\n"),
+        Replacing::General(&regex::EMOJI, ":$1:"),
     ];
 
     let text = normalize(context, &guild_id, &message.mentions, &message.content);
-    replacings.iter().fold(text, |accumulator, replacing| match replacing {
+    replacings.into_iter().fold(text, |accumulator, replacing| match replacing {
         Replacing::General(regex, replacement) => {
-            let regex = match regex {
-                Ok(regex) => regex,
-                Err(error) => {
-                    tracing::debug!("error regex\nError: {error:?}");
-                    return accumulator;
-                },
-            };
             regex.replace_all(&accumulator, replacement).to_string()
         },
     })

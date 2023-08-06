@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use anyhow::{bail, Context as _, Result};
 use indexmap::IndexMap;
-use regex_lite::Regex;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
     builder::{CreateCommand, CreateCommandOption, CreateEmbed, CreateInteractionResponseMessage},
@@ -17,6 +16,7 @@ use voicevox::dictionary::{
 
 use crate::{
     character_converter::{to_full_width, to_half_width, to_katakana},
+    regex,
     utils::{get_voicevox, normalize, respond},
 };
 
@@ -43,14 +43,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
         subcommand_options.entry("surface".to_string()).and_modify(|word| {
             let text = normalize(context, &guild_id, &users, word);
-            let regex = match Regex::new(r"<:([\w_]+):\d+>") {
-                Ok(regex) => regex,
-                Err(error) => {
-                    tracing::debug!("error regex\nError: {error:?}");
-                    return;
-                },
-            };
-            regex.replace_all(&text, ":$1:").to_string();
+            regex::EMOJI.replace_all(&text, ":$1:").to_string();
         });
 
         match option.name.as_str() {
