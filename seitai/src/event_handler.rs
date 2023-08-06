@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use lazy_regex::{Lazy, Regex};
+use lazy_regex::Regex;
 use serenity::{
     all::{ChannelId as SerenityChannelId, ChannelType, VoiceState},
     async_trait,
@@ -20,7 +20,7 @@ use crate::{
 pub struct Handler;
 
 enum Replacing {
-    General(&'static Lazy<Regex>, &'static str),
+    General(&'static Regex, &'static str),
 }
 
 #[async_trait]
