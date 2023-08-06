@@ -197,10 +197,10 @@ async fn get_audio_source(context: &Context, audio_generator: &AudioGenerator, t
     match text {
         "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE")
             .await
-            .context("failed to get chaced audio: CODE"),
+            .context("failed to get cached audio \"CODE\""),
         "{{seitai::replacement::URL}}" => get_cached_audio(context, "URL")
             .await
-            .context("failed to get chaced audio: URL"),
+            .context("failed to get cached audio \"URL\""),
         _ => {
             let audio = audio_generator
                 .generate(speaker, text)
