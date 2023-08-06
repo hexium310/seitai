@@ -1,6 +1,6 @@
 use regex_lite::Regex;
 use serenity::{
-    all::{ChannelId as SerenityChannelId, GuildId, UserId as SerenityUserId, VoiceState},
+    all::{ChannelId as SerenityChannelId, GuildId, VoiceState},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
@@ -97,24 +97,22 @@ impl EventHandler for Handler {
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        let Some(connection) = call.current_connection() else {
+        let bot_id = context.http.get_current_user().await.unwrap().id;
+        let is_bot_connected = new_state.user_id == bot_id;
+        if is_bot_connected {
             return;
-        };
+        }
 
-        let channel_id_bot_at = connection
-            .channel_id
+        let channel_id_bot_at = call.current_channel()
             .map(|channel_id| SerenityChannelId::from(channel_id.0));
-        let bot_id = SerenityUserId::from(connection.user_id.0);
-
         let is_disconnected = new_state.channel_id.is_none();
         let newly_connected = match &old_state {
             Some(old_state) => old_state.channel_id != new_state.channel_id,
             None => true,
         };
-        let is_bot_connected = new_state.user_id == bot_id;
         let is_connected_bot_at = new_state.channel_id == channel_id_bot_at;
 
-        if !is_disconnected && newly_connected && (is_bot_connected || is_connected_bot_at) {
+        if !is_disconnected && newly_connected && is_connected_bot_at {
             handle_connect(&context, &new_state, &mut call, is_bot_connected).await;
             return;
         }

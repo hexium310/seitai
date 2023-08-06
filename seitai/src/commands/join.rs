@@ -5,7 +5,7 @@ use serenity::{
     model::{application::CommandInteraction, Colour},
 };
 
-use crate::utils::{get_guild, get_manager, respond};
+use crate::utils::{get_guild, get_manager, respond, get_cached_audio};
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let guild = match get_guild(context, interaction) {
@@ -47,6 +47,12 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     };
     if let Err(why) = join.await {
         eprintln!("err: {why}");
+    }
+
+    {
+        let mut call = call.lock().await;
+        let audio = get_cached_audio(context, "connected").await.unwrap();
+        call.enqueue_input(audio).await;
     }
 
     let message = CreateInteractionResponseMessage::new().embed(
