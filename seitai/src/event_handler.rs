@@ -1,6 +1,6 @@
 use regex_lite::Regex;
 use serenity::{
-    all::{ChannelId as SerenityChannelId, GuildId, VoiceState},
+    all::{ChannelId as SerenityChannelId, ChannelType, GuildId, VoiceState},
     async_trait,
     client::{Context, EventHandler},
     model::{application::Interaction, channel::Message, gateway::Ready},
@@ -103,7 +103,8 @@ impl EventHandler for Handler {
             return;
         }
 
-        let channel_id_bot_at = call.current_channel()
+        let channel_id_bot_at = call
+            .current_channel()
             .map(|channel_id| SerenityChannelId::from(channel_id.0));
         let is_disconnected = new_state.channel_id.is_none();
         let newly_connected = match &old_state {
@@ -115,6 +116,23 @@ impl EventHandler for Handler {
         if !is_disconnected && newly_connected && is_connected_bot_at {
             handle_connect(&context, &new_state, &mut call, is_bot_connected).await;
             return;
+        }
+
+        if let Some(channel_id_bot_at) = channel_id_bot_at {
+            let Some(channel) = channel_id_bot_at.to_channel(&context.http).await.unwrap().guild() else {
+                return;
+            };
+            if channel.kind != ChannelType::Voice {
+                return;
+            }
+            let members = channel.members(&context.cache).unwrap();
+            let ids = members.iter().map(|v| v.user.id).collect::<Vec<_>>();
+            let is_alone = ids != vec![bot_id];
+            if is_alone {
+                return;
+            }
+
+            call.leave().await.unwrap();
         }
     }
 }
