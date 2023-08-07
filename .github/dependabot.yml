@@ -5,19 +5,19 @@ updates:
     schedule:
       interval: weekly
       day: saturday
-      time: 00:00
+      time: "00:00"
       timezone: Asia/Tokyo
   - directory: /
     package-ecosystem: cargo
     schedule:
       interval: weekly
       day: saturday
-      time: 00:00
+      time: "00:00"
       timezone: Asia/Tokyo
   - directory: /
     package-ecosystem: docker
     schedule:
       interval: weekly
       day: saturday
-      time: 00:00
+      time: "00:00"
       timezone: Asia/Tokyo
