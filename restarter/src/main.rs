@@ -8,7 +8,7 @@ use serenity::{
     model::gateway::GatewayIntents,
     prelude::TypeMapKey,
 };
-use tokio::sync::Notify;
+use tokio::{sync::Notify, signal::unix::{signal, SignalKind}};
 
 mod event_handler;
 
@@ -56,8 +56,24 @@ async fn main() {
         })));
     }
 
-    if let Err(error) = client.start().await {
-        tracing::error!("failed to start client\nError: {error:?}");
-        exit(1);
+    tokio::spawn(async move {
+        if let Err(why) = client.start().await {
+            tracing::error!("failed to start client\nError: {error:?}");
+            exit(1);
+        }
+    });
+
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+
+    tokio::select! {
+        _ = sigint.recv() => {
+            tracing::info!("received SIGINT, shutting down");
+            exit(130);
+        },
+        _ = sigterm.recv() => {
+            tracing::info!("received SIGTERM, shutting down");
+            exit(143);
+        },
     }
 }

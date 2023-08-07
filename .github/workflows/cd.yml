@@ -36,8 +36,8 @@ jobs:
           push: true
           targets: ${{ env.TARGETS }}
           set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
+            *.cache-from=type=gha,scope=cache-${{ env.TARGETS }}
+            *.cache-to=type=gha,scope=cache-${{ env.TARGETS }},mode=max
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
