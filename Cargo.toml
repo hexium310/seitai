@@ -20,7 +20,7 @@ branch = "next"
 features = ["builtin-queue"]
 
 [workspace.dependencies.tokio]
-version = "1.28.2"
+version = "1.29.1"
 features = ["macros", "net", "rt-multi-thread", "signal"]
 
 [workspace.dependencies.tracing]
