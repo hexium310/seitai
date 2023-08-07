@@ -57,7 +57,7 @@ async fn main() {
     }
 
     tokio::spawn(async move {
-        if let Err(why) = client.start().await {
+        if let Err(error) = client.start().await {
             tracing::error!("failed to start client\nError: {error:?}");
             exit(1);
         }
