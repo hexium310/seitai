@@ -4,3 +4,5 @@ use serde::Deserialize;
 pub struct UnprocessableEntity {
     pub detail: String,
 }
+
+pub struct UnexpectedStatusCode;

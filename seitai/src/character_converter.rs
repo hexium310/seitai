@@ -1,4 +1,4 @@
-use regex_lite::Regex;
+use crate::regex;
 
 const HALF_GRAPHICAL_BEGIN: u32 = '!' as u32;
 const HALF_GRAPHICAL_END: u32 = '~' as u32;
@@ -21,8 +21,7 @@ pub(crate) fn to_full_width(text: &str) -> String {
 }
 
 pub(crate) fn to_half_width(text: &str) -> String {
-    Regex::new(r"\u3000")
-        .unwrap()
+    regex::IDEOGRAPHIC_SPACE
         .replace_all(text, " ")
         .chars()
         .map(|char| match u32::from(char) {

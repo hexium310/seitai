@@ -10,6 +10,13 @@ workspace = true
 version = "2.0.0"
 features = ["serde"]
 
+[dependencies.lazy-regex]
+version = "3.0.1"
+features = ["lite"]
+
+[dependencies.logging]
+workspace = true
+
 [dependencies.regex-lite]
 version = "0.1.0"
 
@@ -25,6 +32,9 @@ version = "0.5.2"
 features = ["wav"]
 
 [dependencies.tokio]
+workspace = true
+
+[dependencies.tracing]
 workspace = true
 
 [dependencies.uuid]

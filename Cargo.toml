@@ -5,6 +5,9 @@ default-members = ["seitai"]
 [workspace.dependencies.anyhow]
 version = "1.0.71"
 
+[workspace.dependencies.logging]
+path = "crates/logging"
+
 [workspace.dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity.git"
 branch = "next"
@@ -19,6 +22,9 @@ features = ["builtin-queue"]
 [workspace.dependencies.tokio]
 version = "1.28.2"
 features = ["macros", "net", "rt-multi-thread", "signal"]
+
+[workspace.dependencies.tracing]
+version = "0.1.37"
 
 [workspace.dependencies.uuid]
 version = "1.4.1"

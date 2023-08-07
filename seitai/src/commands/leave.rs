@@ -8,7 +8,7 @@ use serenity::{
 use crate::utils::{get_guild, get_manager, respond};
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
-    let guild = get_guild(context, interaction).context("A guild cannot be get")?;
+    let guild = get_guild(context, interaction).context("failed to get guild")?;
     let manager = get_manager(context).await?;
     let has_handler = manager.get(guild.id).is_some();
 
@@ -22,14 +22,27 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         return Ok(());
     }
 
-    manager.remove(guild.id).await?;
+    match manager.remove(guild.id).await {
+        Ok(_) => {
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                    .description("ボイスチャンネルから切断しました。")
+                    .colour(Colour::FOOYOO),
+            );
+            respond(context, interaction, message).await?;
+        },
+        Err(error) => {
+            tracing::error!("failed to disconnect from voice channel\nError: {error:?}");
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                    .description("ボイスチャンネルからの切断に失敗しました。")
+                    .field("詳細", format!("```\n{}\n```", error), false)
+                    .colour(Colour::RED),
+            );
+            respond(context, interaction, message).await?;
+        },
+    };
 
-    let message = CreateInteractionResponseMessage::new().embed(
-        CreateEmbed::new()
-            .description("ボイスチャンネルから切断しました。")
-            .colour(Colour::FOOYOO),
-    );
-    respond(context, interaction, message).await?;
     Ok(())
 }
 

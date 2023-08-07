@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::{Api, Client, Config};
 use serenity::{
@@ -11,6 +11,7 @@ use serenity::{
     model::gateway::Ready,
 };
 use tokio::sync::Notify;
+use tracing::instrument;
 
 use crate::Data;
 
@@ -18,15 +19,22 @@ pub struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
+    #[instrument(skip(self, context))]
     async fn ready(&self, context: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        tracing::info!("{} is ready", ready.user.name);
 
-        let data = get_data(&context).await;
+        let Some(data) = get_data(&context).await else {
+            tracing::error!("failed to get data");
+            return;
+        };
         data.lock().await.bot_id = ready.user.id;
     }
 
     async fn voice_state_update(&self, context: Context, _old: Option<VoiceState>, new: VoiceState) {
-        let data = get_data(&context).await;
+        let Some(data) = get_data(&context).await else {
+            tracing::error!("failed to get data");
+            return;
+        };
         let mut data = data.lock().await;
         let bot_id = data.bot_id;
 
@@ -46,13 +54,16 @@ impl EventHandler for Handler {
     }
 }
 
-async fn get_data(context: &Context) -> Arc<Mutex<Data>> {
+async fn get_data(context: &Context) -> Option<Arc<Mutex<Data>>> {
     let data = context.data.read().await;
-    data.get::<crate::Data>().unwrap().clone()
+    data.get::<crate::Data>().cloned()
 }
 
 async fn wait_restart(context: &Context) {
-    let data = get_data(context).await;
+    let Some(data) = get_data(context).await else {
+        tracing::error!("failed to get data");
+        return;
+    };
 
     tokio::spawn(async move {
         let cancellation = {
@@ -63,14 +74,14 @@ async fn wait_restart(context: &Context) {
 
         tokio::select! {
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(300)) => {
-                if let Err(why) = restart().await {
-                    println!("Restarting voicevox failed: {why}");
+                if let Err(error) = restart().await {
+                    tracing::error!("failed to restart statefulsets/voicevox\nError: {error:?}");
                     return;
                 }
-                println!("voicevox restarted");
+                tracing::info!("succeeded in restarting statefulsets/voicevox");
             },
             _ = cancellation.notified() => {
-                println!("Restarting voicevox is cancelled");
+                tracing::info!("canceled restarting statefulsets/voicevox");
             },
         }
     });
@@ -80,7 +91,7 @@ async fn restart() -> Result<()> {
     let config = match Config::incluster() {
         Ok(config) => config,
         Err(_) => {
-            bail!("This app is not running in cluster of Kubernetes");
+            bail!("this app is not running in cluster of Kubernetes");
         },
     };
     let client = Client::try_from(config)?;

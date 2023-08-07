@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use serenity::{
     builder::{CreateCommand, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
@@ -45,13 +45,11 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         call.deafen(true).await?;
         call.join(connect_to).await?
     };
-    if let Err(why) = join.await {
-        eprintln!("err: {why}");
-    }
+    join.await?;
 
     {
         let mut call = call.lock().await;
-        let audio = get_cached_audio(context, "connected").await.unwrap();
+        let audio = get_cached_audio(context, "connected").await.context("failed to get cached audio \"connected\"")?;
         call.enqueue_input(audio).await;
     }
 

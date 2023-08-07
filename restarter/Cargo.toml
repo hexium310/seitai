@@ -13,7 +13,13 @@ features = ["v1_26"]
 [dependencies.kube]
 version = "0.84.0"
 
+[dependencies.logging]
+workspace = true
+
 [dependencies.tokio]
+workspace = true
+
+[dependencies.tracing]
 workspace = true
 
 [dependencies.serenity]

@@ -13,7 +13,7 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
         .options
         .iter()
         .filter_map(|response_option| match response_option.name.as_str() {
-            "command" => match response_option.value.as_str().unwrap() {
+            "command" => match response_option.value.as_str().unwrap_or_default() {
                 "join" => Some(
                     CreateEmbed::new()
                         .title("/join")

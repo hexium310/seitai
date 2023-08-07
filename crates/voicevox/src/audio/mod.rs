@@ -49,7 +49,7 @@ impl AudioGenerator {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PostAudioQueryResult::UnprocessableEntity(serde_json::from_slice(
                 &bytes,
             )?)),
-            _ => unreachable!(),
+            code => bail!("received unexpected {code} from POST audio_query"),
         }
     }
 
@@ -62,7 +62,7 @@ impl AudioGenerator {
             StatusCode::UNPROCESSABLE_ENTITY => Ok(PostSynthesisResult::UnprocessableEntity(serde_json::from_slice(
                 &bytes,
             )?)),
-            _ => unreachable!(),
+            code => bail!("received unexpected {code} from POST synthesis"),
         }
     }
 
@@ -70,7 +70,7 @@ impl AudioGenerator {
         let mut audio_query = match self
             .generate_query(speaker, text)
             .await
-            .with_context(|| format!("Generating audio query with `{text}` failed"))?
+            .with_context(|| format!("failed to generate audio query with `{text}`"))?
         {
             PostAudioQueryResult::Ok(audio_query) => audio_query,
             PostAudioQueryResult::UnprocessableEntity(error) => {
@@ -85,7 +85,7 @@ impl AudioGenerator {
         match self
             .synthesize(speaker, &json)
             .await
-            .with_context(|| format!("Synthesizing failed. The audio query used is {json}"))?
+            .with_context(|| format!("failed to synthesize with {json}"))?
         {
             PostSynthesisResult::Ok(audio) => Ok(audio),
             PostSynthesisResult::UnprocessableEntity(error) => {

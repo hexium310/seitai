@@ -1,5 +1,6 @@
-use std::{collections::HashMap, env, sync::Arc, process::exit};
+use std::{collections::HashMap, env, process::exit, sync::Arc};
 
+use logging::initialize_logging;
 use serenity::{
     all::{ChannelId, GuildId, UserId},
     client::Client,
@@ -23,13 +24,27 @@ impl TypeMapKey for Data {
 
 #[tokio::main]
 async fn main() {
-    let token = env::var("DISCORD_TOKEN").expect("`DISCORD_TOKEN` is not set.");
+    initialize_logging();
+
+    let token = match env::var("DISCORD_TOKEN") {
+        Ok(token) => token,
+        Err(error) => {
+            tracing::error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
+            exit(1);
+        },
+    };
 
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
-    let mut client = Client::builder(token, intents)
+    let mut client = match Client::builder(token, intents)
         .event_handler(event_handler::Handler)
         .await
-        .expect("Error creating client");
+    {
+        Ok(client) => client,
+        Err(error) => {
+            tracing::error!("failed to build serenity client\nError: {error:?}");
+            exit(1);
+        },
+    };
 
     {
         let mut data = client.data.write().await;
@@ -42,8 +57,8 @@ async fn main() {
     }
 
     tokio::spawn(async move {
-        if let Err(why) = client.start().await {
-            println!("Client error: {why:?}");
+        if let Err(error) = client.start().await {
+            tracing::error!("failed to start client\nError: {error:?}");
             exit(1);
         }
     });
@@ -53,11 +68,11 @@ async fn main() {
 
     tokio::select! {
         _ = sigint.recv() => {
-            println!("received SIGINT, shutting down");
+            tracing::info!("received SIGINT, shutting down");
             exit(130);
         },
         _ = sigterm.recv() => {
-            println!("received SIGTERM, shutting down");
+            tracing::info!("received SIGTERM, shutting down");
             exit(143);
         },
     }
