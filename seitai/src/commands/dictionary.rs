@@ -40,10 +40,12 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
 
     for option in &interaction.data.options {
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
-        subcommand_options.entry_ref("surface").and_replace_entry_with(|_key, word| {
-            let text = normalize(context, &guild_id, &users, &word);
-            Some(regex::EMOJI.replace_all(&text, ":$1:").into_owned())
-        });
+        subcommand_options
+            .entry_ref("surface")
+            .and_replace_entry_with(|_key, word| {
+                let text = normalize(context, &guild_id, &users, &word);
+                Some(regex::EMOJI.replace_all(&text, ":$1:").into_owned())
+            });
 
         match option.name.as_str() {
             "add" => {
@@ -136,6 +138,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
     Ok(())
 }
 
+#[rustfmt::skip]
 pub fn register() -> CreateCommand {
     let add = {
         let word = CreateCommandOption::new(CommandOptionType::String, "surface", "Word to be registered")
@@ -274,9 +277,7 @@ async fn update_word(
     uuid: &Uuid,
     property: &HashMap<String, String>,
 ) -> Result<()> {
-    let word = property
-        .get("surface")
-        .context("there is no surface to update word")?;
+    let word = property.get("surface").context("there is no surface to update word")?;
     let pronunciation = property
         .get("pronunciation")
         .context("there is no pronunciation to update word")?;

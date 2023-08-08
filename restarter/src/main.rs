@@ -8,7 +8,10 @@ use serenity::{
     model::gateway::GatewayIntents,
     prelude::TypeMapKey,
 };
-use tokio::{sync::Notify, signal::unix::{signal, SignalKind}};
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::Notify,
+};
 
 mod event_handler;
 

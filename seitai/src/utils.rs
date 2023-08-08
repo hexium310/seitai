@@ -16,7 +16,7 @@ use songbird::{
 };
 use voicevox::Voicevox;
 
-use crate::{SoundStore, VoicevoxClient, regex};
+use crate::{regex, SoundStore, VoicevoxClient};
 
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)

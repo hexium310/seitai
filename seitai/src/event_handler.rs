@@ -178,7 +178,9 @@ impl EventHandler for Handler {
             let members = match channel.members(&context.cache) {
                 Ok(members) => members,
                 Err(error) => {
-                    tracing::error!("failed to get members in channel {channel_id_bot_at} to check alone\nError: {error:?}");
+                    tracing::error!(
+                        "failed to get members in channel {channel_id_bot_at} to check alone\nError: {error:?}"
+                    );
                     return;
                 },
             };
@@ -196,7 +198,12 @@ impl EventHandler for Handler {
     }
 }
 
-async fn get_audio_source(context: &Context, audio_generator: &AudioGenerator, text: &str, speaker: &str) -> Result<Input> {
+async fn get_audio_source(
+    context: &Context,
+    audio_generator: &AudioGenerator,
+    text: &str,
+    speaker: &str,
+) -> Result<Input> {
     match text {
         "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE")
             .await
@@ -248,11 +255,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
 
         let member = state.member.as_ref()?;
         let user = &member.user;
-        let name = member
-            .nick
-            .as_ref()
-            .or(user.global_name.as_ref())
-            .unwrap_or(&user.name);
+        let name = member.nick.as_ref().or(user.global_name.as_ref()).unwrap_or(&user.name);
         let text = format!("{name}さんが");
 
         let audio_generator = {
