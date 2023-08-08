@@ -43,7 +43,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
         subcommand_options.entry("surface".to_string()).and_modify(|word| {
             let text = normalize(context, &guild_id, &users, word);
-            regex::EMOJI.replace_all(&text, ":$1:").to_string();
+            *word = regex::EMOJI.replace_all(&text, ":$1:").to_string();
         });
 
         match option.name.as_str() {
