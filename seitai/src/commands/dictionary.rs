@@ -66,7 +66,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                                 .field("詳細", format!("```\n{}\n```", error), false)
                                 .colour(Colour::RED),
                         );
-                        respond(context, interaction, message).await?;
+                        respond(context, interaction, &message).await?;
                         continue;
                     },
                 };
@@ -94,7 +94,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                         .description(format!("```\n{}\n```", words.join("\n")))
                         .colour(Colour::FOOYOO),
                 );
-                respond(context, interaction, message).await?;
+                respond(context, interaction, &message).await?;
             },
             "delete" => {
                 let word = subcommand_options
@@ -110,7 +110,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                                 .field("詳細", format!("```\n{}\n```", error), false)
                                 .colour(Colour::RED),
                         );
-                        respond(context, interaction, message).await?;
+                        respond(context, interaction, &message).await?;
                         continue;
                     },
                 };
@@ -126,7 +126,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                         .field("単語", format!("```\n{}\n```", word), false)
                         .colour(Colour::RED),
                 );
-                respond(context, interaction, message).await?;
+                respond(context, interaction, &message).await?;
             },
             _ => {
                 unreachable!();
@@ -250,7 +250,7 @@ async fn register_word(
                     .field("ヨミ", format!("```\n{}\n```", pronunciation), false)
                     .colour(Colour::FOOYOO),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
         PostUserDictWordResult::UnprocessableEntity(error) => {
             tracing::error!("failed to register {word} into dictionary\nError: {error:?}");
@@ -260,7 +260,7 @@ async fn register_word(
                     .field("詳細", format!("```\n{}\n```", error.detail), false)
                     .colour(Colour::RED),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
     };
 
@@ -294,7 +294,7 @@ async fn update_word(
                     .field("ヨミ", format!("```\n{}\n```", pronunciation), false)
                     .colour(Colour::FOOYOO),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
         PutUserDictWordResult::UnprocessableEntity(error) => {
             tracing::error!("failed to update {word} in dictionary\nError: {error:?}");
@@ -304,7 +304,7 @@ async fn update_word(
                     .field("詳細", format!("```\n{}\n```", error.detail), false)
                     .colour(Colour::RED),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
     };
 
@@ -326,7 +326,7 @@ async fn delete_word(
                     .field("単語", format!("```\n{}\n```", word), false)
                     .colour(Colour::FOOYOO),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
         DeleteUserDictWordResult::UnprocessableEntity(error) => {
             tracing::error!("failed to delete {word} in dictionary\nError: {error:?}");
@@ -336,7 +336,7 @@ async fn delete_word(
                     .field("詳細", format!("```\n{}\n```", error.detail), false)
                     .colour(Colour::RED),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
     };
 

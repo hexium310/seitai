@@ -17,7 +17,7 @@ impl Voicevox {
                 base: base.clone(),
                 default_speed: 1.2,
             },
-            dictionary: Dictionary { base: base.clone() },
+            dictionary: Dictionary { base },
         })
     }
 }

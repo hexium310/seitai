@@ -16,7 +16,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     .description("このコマンドは使えません。")
                     .colour(Colour::RED),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
             return Ok(());
         },
     };
@@ -33,7 +33,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     .description("接続先のボイスチャンネルが見つかりません。")
                     .colour(Colour::RED),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
             return Ok(());
         },
     };
@@ -58,7 +58,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             .description("ボイスチャンネルに接続しました。")
             .colour(Colour::FOOYOO),
     );
-    respond(context, interaction, message).await?;
+    respond(context, interaction, &message).await?;
     Ok(())
 }
 

@@ -5,7 +5,7 @@ use url::Url;
 
 #[async_trait]
 pub trait Request: Send + Sync {
-    fn base(&self) -> Url;
+    fn base(&self) -> &Url;
 
     async fn get(&self, endpoint: &str, parameters: &[(&str, &str)]) -> Result<(StatusCode, Bytes)> {
         let url = self.url(endpoint, parameters);
@@ -41,7 +41,7 @@ pub trait Request: Send + Sync {
     }
 
     fn url(&self, endpoint: &str, parameters: &[(&str, &str)]) -> Url {
-        let mut url = self.base();
+        let mut url = self.base().clone();
         url.set_path(endpoint);
         if !parameters.is_empty() {
             url.query_pairs_mut().extend_pairs(parameters);

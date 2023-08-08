@@ -250,9 +250,9 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
         let user = &member.user;
         let name = member
             .nick
-            .clone()
-            .or(user.global_name.clone())
-            .unwrap_or(user.name.clone());
+            .as_ref()
+            .or(user.global_name.as_ref())
+            .unwrap_or(&user.name);
         let text = format!("{name}さんが");
 
         let audio_generator = {

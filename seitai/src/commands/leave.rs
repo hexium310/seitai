@@ -18,7 +18,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                 .description("ボイスチャンネルに接続していません。")
                 .colour(Colour::RED),
         );
-        respond(context, interaction, message).await?;
+        respond(context, interaction, &message).await?;
         return Ok(());
     }
 
@@ -29,7 +29,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     .description("ボイスチャンネルから切断しました。")
                     .colour(Colour::FOOYOO),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
         Err(error) => {
             tracing::error!("failed to disconnect from voice channel\nError: {error:?}");
@@ -39,7 +39,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
                     .field("詳細", format!("```\n{}\n```", error), false)
                     .colour(Colour::RED),
             );
-            respond(context, interaction, message).await?;
+            respond(context, interaction, &message).await?;
         },
     };
 

@@ -71,7 +71,7 @@ pub async fn run(context: &Context, interaction: &CommandInteraction) -> Result<
     }
 
     let message = CreateInteractionResponseMessage::new().embeds(embeds);
-    respond(context, interaction, message).await?;
+    respond(context, interaction, &message).await?;
     Ok(())
 }
 

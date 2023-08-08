@@ -32,7 +32,7 @@ pub(crate) fn get_guild(context: &Context, interaction: &CommandInteraction) -> 
 pub(crate) async fn respond(
     context: &Context,
     interaction: &CommandInteraction,
-    message: CreateInteractionResponseMessage,
+    message: &CreateInteractionResponseMessage,
 ) -> Result<()> {
     let builder = CreateInteractionResponse::Message(message.clone());
     interaction

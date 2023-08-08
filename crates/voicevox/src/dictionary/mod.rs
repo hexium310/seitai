@@ -14,8 +14,8 @@ pub struct Dictionary {
 }
 
 impl Request for Dictionary {
-    fn base(&self) -> Url {
-        self.base.clone()
+    fn base(&self) -> &Url {
+        &self.base
     }
 }
 

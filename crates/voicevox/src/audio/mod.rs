@@ -32,8 +32,8 @@ pub struct AudioGenerator {
 }
 
 impl Request for AudioGenerator {
-    fn base(&self) -> Url {
-        self.base.clone()
+    fn base(&self) -> &Url {
+        &self.base
     }
 }
 
