@@ -1,6 +1,7 @@
-use std::{collections::HashMap, env, process::exit, sync::Arc};
+use std::{env, process::exit, sync::Arc};
 
 use anyhow::Result;
+use hashbrown::HashMap;
 use logging::initialize_logging;
 use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::{

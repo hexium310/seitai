@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{borrow::Cow, sync::Arc};
 
 use anyhow::{Context as _, Result};
+use hashbrown::HashMap;
 use serenity::{
     all::{GuildId, User},
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
@@ -15,7 +16,7 @@ use songbird::{
 };
 use voicevox::Voicevox;
 
-use crate::{SoundStore, VoicevoxClient};
+use crate::{SoundStore, VoicevoxClient, regex};
 
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)
@@ -53,17 +54,23 @@ pub(crate) async fn get_cached_audio(context: &Context, key: &str) -> Option<Inp
     sound_store.get(key).map(|source| source.new_handle().into())
 }
 
-pub(crate) fn normalize(context: &Context, guild_id: &GuildId, users: &[User], text: &str) -> String {
-    let content_safe_options = ContentSafeOptions::new()
-        .clean_role(true)
-        .clean_user(true)
-        .clean_channel(true)
-        .show_discriminator(false)
-        .display_as_member_from(guild_id)
-        .clean_here(false)
-        .clean_everyone(false);
+pub(crate) fn normalize<'a>(context: &Context, guild_id: &GuildId, users: &[User], text: &'a str) -> Cow<'a, str> {
+    match regex::MENTION_CHANNEL.is_match(text) {
+        true => {
+            let content_safe_options = ContentSafeOptions::new()
+                .clean_role(true)
+                .clean_user(true)
+                .clean_channel(true)
+                .show_discriminator(false)
+                .display_as_member_from(guild_id)
+                .clean_here(false)
+                .clean_everyone(false);
 
-    content_safe(&context.cache, text, &content_safe_options, users)
+            let normalized = content_safe(&context.cache, text, &content_safe_options, users);
+            Cow::Owned(normalized)
+        },
+        false => Cow::Borrowed(text),
+    }
 }
 
 pub(crate) async fn get_voicevox(context: &Context) -> Option<Arc<Mutex<Voicevox>>> {

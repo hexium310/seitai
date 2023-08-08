@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::{Context as _, Result};
 use lazy_regex::Regex;
 use serenity::{
@@ -19,7 +21,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Handler;
 
-enum Replacing {
+enum Replacement {
     General(&'static Regex, &'static str),
 }
 
@@ -212,32 +214,30 @@ async fn get_audio_source(context: &Context, audio_generator: &AudioGenerator, t
     }
 }
 
-fn replace_message(context: &Context, message: &Message) -> String {
+fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> {
     let Some(guild_id) = message.guild_id else {
-        return message.content.clone();
+        return Cow::Borrowed(&message.content);
     };
 
-    let replacings = [
-        Replacing::General(
-            &regex::CODE,
-            "\n{{seitai::replacement::CODE}}\n",
-        ),
-        Replacing::General(
-            &regex::URL,
-            "\n{{seitai::replacement::URL}}\n",
-        ),
-        Replacing::General(&regex::WW, "ワラワラ"),
-        Replacing::General(&regex::W, "ワラ"),
-        Replacing::General(&regex::IDEOGRAPHIC_FULL_STOP, "。\n"),
-        Replacing::General(&regex::EMOJI, ":$1:"),
+    let replacements = [
+        Replacement::General(&regex::CODE, "\n{{seitai::replacement::CODE}}\n"),
+        Replacement::General(&regex::URL, "\n{{seitai::replacement::URL}}\n"),
+        Replacement::General(&regex::WW, "ワラワラ"),
+        Replacement::General(&regex::W, "ワラ"),
+        Replacement::General(&regex::IDEOGRAPHIC_FULL_STOP, "。\n"),
+        Replacement::General(&regex::EMOJI, ":$1:"),
     ];
 
     let text = normalize(context, &guild_id, &message.mentions, &message.content);
-    replacings.into_iter().fold(text, |accumulator, replacing| match replacing {
-        Replacing::General(regex, replacement) => {
-            regex.replace_all(&accumulator, replacement).to_string()
-        },
-    })
+    replacements
+        .into_iter()
+        .fold(text, |accumulator, replacement| match replacement {
+            Replacement::General(regex, replacer) => match regex.replace_all(&accumulator, replacer) {
+                Cow::Borrowed(borrowed) if borrowed.len() == accumulator.len() => accumulator,
+                Cow::Borrowed(borrowed) => Cow::Owned(borrowed.to_owned()),
+                Cow::Owned(owned) => Cow::Owned(owned),
+            },
+        })
 }
 
 async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, is_bot_connected: bool) {

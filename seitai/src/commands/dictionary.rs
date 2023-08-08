@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use anyhow::{bail, Context as _, Result};
+use hashbrown::HashMap;
 use indexmap::IndexMap;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
@@ -20,7 +19,7 @@ use crate::{
     utils::{get_voicevox, normalize, respond},
 };
 
-pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
+pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let Some(guild_id) = interaction.guild_id else {
         return Ok(());
     };
@@ -41,24 +40,19 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
 
     for option in &interaction.data.options {
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
-        subcommand_options.entry("surface".to_string()).and_modify(|word| {
-            let text = normalize(context, &guild_id, &users, word);
-            *word = regex::EMOJI.replace_all(&text, ":$1:").to_string();
+        subcommand_options.entry_ref("surface").and_replace_entry_with(|_key, word| {
+            let text = normalize(context, &guild_id, &users, &word);
+            Some(regex::EMOJI.replace_all(&text, ":$1:").into_owned())
         });
 
         match option.name.as_str() {
             "add" => {
+                subcommand_options.entry_ref("accent_type").or_insert("0".to_string());
+                subcommand_options.entry_ref("priority").or_insert("8".to_string());
                 subcommand_options
-                    .entry("accent_type".to_string())
-                    .or_insert("0".to_string());
-                subcommand_options
-                    .entry("priority".to_string())
-                    .or_insert("8".to_string());
-                subcommand_options
-                    .entry("pronunciation".to_string())
-                    .and_modify(|pronunciation| {
-                        *pronunciation = to_katakana(pronunciation);
-                    });
+                    .entry_ref("pronunciation")
+                    .and_replace_entry_with(|_key, pronunciation| Some(to_katakana(&*pronunciation).into_owned()));
+
                 let word = subcommand_options
                     .get("surface")
                     .context("there is no surface to make sure whether word is regsitered")?;
@@ -196,19 +190,17 @@ pub fn register() -> CreateCommand {
 
 fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, String>> {
     if let CommandDataOptionValue::SubCommand(value) = value {
-        let mut subcommand_options = HashMap::new();
-        for subcommand_option in value {
-            let name = subcommand_option.name.clone();
-            match &subcommand_option.value {
-                CommandDataOptionValue::String(value) => {
-                    subcommand_options.insert(name, value.to_string());
-                },
-                CommandDataOptionValue::Integer(value) => {
-                    subcommand_options.insert(name, value.to_string());
-                },
-                _ => {},
-            }
-        }
+        let subcommand_options = value
+            .iter()
+            .map(|subcommand_option| {
+                let name = subcommand_option.name.clone();
+                match &subcommand_option.value {
+                    CommandDataOptionValue::String(value) => (name, value.to_string()),
+                    CommandDataOptionValue::Integer(value) => (name, value.to_string()),
+                    _ => unreachable!(),
+                }
+            })
+            .collect::<HashMap<_, _>>();
 
         Some(subcommand_options)
     } else {
