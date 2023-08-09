@@ -25,7 +25,9 @@ workspace = true
 features = ["builder", "collector"]
 
 [dependencies.songbird]
-workspace = true
+git = "https://github.com/serenity-rs/songbird.git"
+branch = "next"
+features = ["builtin-queue"]
 
 [dependencies.symphonia]
 version = "0.5.2"
@@ -42,7 +44,3 @@ workspace = true
 
 [dependencies.voicevox]
 path = "../crates/voicevox"
-
-[target.'cfg(target_os = "macos")'.dependencies.songbird]
-workspace = true
-features = ["receive"]
