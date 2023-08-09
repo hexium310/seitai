@@ -8,5 +8,5 @@ pub(crate) static HIRAGANA: Lazy<Regex> = lazy_regex!(r"[ぁ-ゖ]+");
 pub(crate) static IDEOGRAPHIC_FULL_STOP: Lazy<Regex> = lazy_regex!(r"。");
 pub(crate) static MENTION_CHANNEL: Lazy<Regex> = lazy_regex!(r"<[@#].+>");
 pub(crate) static URL: Lazy<Regex> = lazy_regex!(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+");
-pub(crate) static W: Lazy<Regex> = lazy_regex!(r"[wｗ]{2,}");
-pub(crate) static WW: Lazy<Regex> = lazy_regex!(r"[wｗ]$");
+pub(crate) static W: Lazy<Regex> = lazy_regex!(r"([^[:word:]]|^)[wｗ]([^[:word:]]|$)");
+pub(crate) static WW: Lazy<Regex> = lazy_regex!(r"([^[:word:]]|^)[wｗ]{2,}([^[:word:]]|$)");

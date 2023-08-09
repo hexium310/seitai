@@ -229,8 +229,8 @@ fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> 
     let replacements = [
         Replacement::General(&regex::CODE, "\n{{seitai::replacement::CODE}}\n"),
         Replacement::General(&regex::URL, "\n{{seitai::replacement::URL}}\n"),
-        Replacement::General(&regex::WW, "ワラワラ"),
-        Replacement::General(&regex::W, "ワラ"),
+        Replacement::General(&regex::WW, "$1ワラワラ$2"),
+        Replacement::General(&regex::W, "$1ワラ$2"),
         Replacement::General(&regex::IDEOGRAPHIC_FULL_STOP, "。\n"),
         Replacement::General(&regex::EMOJI, ":$1:"),
     ];
