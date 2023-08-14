@@ -1,0 +1,55 @@
+[package]
+name = "epitran-kana"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies.anyhow]
+workspace = true
+
+[dependencies.axum]
+version = "0.6.20"
+
+[dependencies.async-trait]
+version = "0.1.72"
+
+[dependencies.hashbrown]
+version = "0.14.0"
+features = ["serde"]
+
+[dependencies.hyper]
+version = "0.14.27"
+features = ["http1", "client", "runtime"]
+
+[dependencies.logging]
+workspace = true
+
+[dependencies.once_cell]
+version = "1.18.0"
+
+[dependencies.serde]
+version = "1.0.175"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0.103"
+
+[dependencies.tokio]
+workspace = true
+
+[dependencies.tower-http]
+version = "0.4.3"
+features = ["trace"]
+
+[dependencies.tracing]
+workspace = true
+
+[dependencies.uuid]
+workspace = true
+
+[dependencies.url]
+version = "2.4.0"
+
+[dependencies.pyo3]
+version = "0.19.2"
+default-features = false
+features = ["auto-initialize"]

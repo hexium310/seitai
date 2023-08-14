@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "_seitai"
+version = "0.0.0"
+description = ""
+authors = ["Hexin <hexium310@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+epitran = "^1.24"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
