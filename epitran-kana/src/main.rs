@@ -14,6 +14,7 @@ use tracing::{Span, Level};
 use crate::endpoints::{ipa, kana};
 
 mod endpoints;
+mod transliterator;
 
 #[tokio::main]
 async fn main() {

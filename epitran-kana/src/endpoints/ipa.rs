@@ -1,14 +1,14 @@
-#![allow(dead_code)]
-use anyhow::{Result, Error};
+use anyhow::Error;
 use axum::extract::Path;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use pyo3::marker::Python;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+
+use crate::transliterator::ipa;
 
 #[derive(Deserialize)]
 pub(crate) struct GetParams {
@@ -40,7 +40,7 @@ impl IntoResponse for IpaError {
 }
 
 pub(crate) async fn get(Path(GetParams { word }): Path<GetParams>) -> std::result::Result<impl IntoResponse, IpaError> {
-    let pronunciation = transliterate(&word).map_err(IpaError::EpitranFailed)?;
+    let pronunciation = ipa::transliterate(&word).map_err(IpaError::EpitranFailed)?;
 
     let response = Ipa {
         word,
@@ -48,13 +48,4 @@ pub(crate) async fn get(Path(GetParams { word }): Path<GetParams>) -> std::resul
     };
 
     Ok((StatusCode::OK, Json(response)))
-}
-
-pub(crate) fn transliterate(word: &str) -> Result<String> {
-    Python::with_gil(|py| {
-        let epitran = py.import("epitran")?.getattr("Epitran")?;
-        let transliterator = epitran.call1(("eng-Latn", ))?;
-        let ipa = transliterator.getattr("transliterate")?.call1((word, ))?.extract::<String>().map_err(Error::msg)?;
-        Ok(ipa.to_string())
-    })
 }
