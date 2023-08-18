@@ -3,7 +3,7 @@ members = ["seitai", "restarter"]
 default-members = ["seitai"]
 
 [workspace.dependencies.anyhow]
-version = "1.0.72"
+version = "1.0.75"
 
 [workspace.dependencies.logging]
 path = "crates/logging"
