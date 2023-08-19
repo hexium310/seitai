@@ -64,6 +64,7 @@ async fn main() {
             ("CODE", "resources/code.wav"),
             ("URL", "resources/url.wav"),
             ("connected", "resources/connected.wav"),
+            ("attachment", "resources/attachment.wav"),
         ];
         for resource in resources {
             let key = resource.0;

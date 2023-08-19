@@ -93,6 +93,12 @@ impl EventHandler for Handler {
                 },
             };
         }
+
+        if !message.attachments.is_empty() {
+            if let Some(audio) = get_cached_audio(&context, "attachment").await {
+                call.enqueue_input(audio).await;
+            }
+        }
     }
 
     #[instrument(skip(self, context))]
