@@ -1,4 +1,5 @@
 set -e
+set -o pipefail
 
 generate_audio() {
     local text="$1"
@@ -8,8 +9,8 @@ generate_audio() {
 
     if [[ ! -e "./resources/$file" ]]; then
         local json
-        json=$(curl --silent --request POST --get --data-urlencode "text=$text" "$VOICEVOX_HOST:50021/audio_query?speaker=1" | sed -e 's/"speedScale":1.0/"speedScale":1.2/')
-        curl --silent --request POST --header 'Content-Type: application/json' --data "$json" "$VOICEVOX_HOST:50021/synthesis?speaker=1" > "./resources/$file"
+        json=$(curl --fail --silent --request POST --get --data-urlencode "text=$text" "$VOICEVOX_HOST:50021/audio_query?speaker=1" | sed -e 's/"speedScale":1.0/"speedScale":1.2/')
+        curl --fail --silent --request POST --header 'Content-Type: application/json' --data "$json" "$VOICEVOX_HOST:50021/synthesis?speaker=1" > "./resources/$file"
         voicevox_is_used=1
     fi
 }
