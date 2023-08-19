@@ -7,6 +7,7 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
+use songbird::input::Input;
 use uuid::Uuid;
 use voicevox::dictionary::{
     response::{DeleteUserDictWordResult, GetUserDictResult, PostUserDictWordResult, PutUserDictWordResult},
@@ -16,7 +17,7 @@ use voicevox::dictionary::{
 use crate::{
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
-    utils::{get_voicevox, normalize, respond},
+    utils::{get_voicevox, normalize, respond, get_manager, get_cached_audio},
 };
 
 pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction) -> Result<()> {
@@ -75,10 +76,42 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
 
                 if let Some(uuid) = uuid {
                     update_word(context, interaction, &dictionary, &uuid, &subcommand_options).await?;
-                    continue;
+                } else {
+                    register_word(context, interaction, &dictionary, &subcommand_options).await?;
                 }
 
-                register_word(context, interaction, &dictionary, &subcommand_options).await?;
+                let manager = get_manager(context).await?;
+                let call = manager.get_or_insert(guild_id);
+                let mut call = call.lock().await;
+
+                if call.current_connection().is_none() {
+                    continue;
+                };
+
+                let word_with_new_pronunciation = async {
+                    let audio_generator = {
+                        let Some(voicevox) = get_voicevox(context).await else {
+                            tracing::error!("failed to get voicevox client to handle connect");
+                            return None;
+                        };
+                        let voicevox = voicevox.lock().await;
+                        voicevox.audio_generator.clone()
+                    };
+                    let speaker = "1";
+                    let audio = match audio_generator.generate(speaker, word).await {
+                        Ok(audio) => audio,
+                        Err(error) => {
+                            tracing::error!("failed to generate audio\nError: {error:?}");
+                            return None;
+                        },
+                    };
+                    Some(Input::from(audio))
+                };
+
+                let (word_with_new_pronunciation, registered) = tokio::join!(word_with_new_pronunciation, get_cached_audio(context, "registered"));
+                for audio in [word_with_new_pronunciation, registered].into_iter().flatten() {
+                    call.enqueue_input(audio).await;
+                }
             },
             // TODO: Paginate
             "list" => {

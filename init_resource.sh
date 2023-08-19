@@ -19,6 +19,7 @@ generate_audio 'コード省略' code.wav
 generate_audio '接続しました' connected.wav
 generate_audio URL url.wav
 generate_audio '添付ファイル' attachment.wav
+generate_audio 'を登録しました' registered.wav
 
 echo $(ls ./resources) are available
 
