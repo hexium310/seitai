@@ -11,7 +11,7 @@ use serenity::{
 use songbird::{input::Input, Call};
 use sqlx::PgPool;
 use tracing::instrument;
-use voicevox::audio::AudioGenerator;
+use voicevox::{audio::AudioGenerator, speaker::response::Speaker};
 
 use crate::{
     commands,
@@ -22,6 +22,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Handler {
     pub(crate) database: PgPool,
+    pub(crate) speakers: Vec<Speaker>,
 }
 
 enum Replacement {
@@ -31,19 +32,34 @@ enum Replacement {
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, context: Context, interaction: Interaction) {
-        if let Interaction::Command(command) = interaction {
-            let result = match command.data.name.as_str() {
-                "dictionary" => commands::dictionary::run(&context, &command).await,
-                "help" => commands::help::run(&context, &command).await,
-                "join" => commands::join::run(&context, &command).await,
-                "leave" => commands::leave::run(&context, &command).await,
-                _ => Ok(()),
-            }
-            .with_context(|| format!("failed to execute /{}", command.data.name));
+        match interaction {
+            Interaction::Command(command) => {
+                let result = match command.data.name.as_str() {
+                    "dictionary" => commands::dictionary::run(&context, &command).await,
+                    "help" => commands::help::run(&context, &command).await,
+                    "join" => commands::join::run(&context, &command).await,
+                    "leave" => commands::leave::run(&context, &command).await,
+                    "voice" => commands::voice::run(&context, &command, &self.database, &self.speakers).await,
+                    _ => Ok(()),
+                }
+                .with_context(|| format!("failed to execute /{}", command.data.name));
 
-            if let Err(error) = result {
-                tracing::error!("failed to handle slash command\nError: {error:?}");
-            }
+                if let Err(error) = result {
+                    tracing::error!("failed to handle slash command\nError: {error:?}");
+                }
+            },
+            Interaction::Autocomplete(command) => {
+                let result = match command.data.name.as_str() {
+                    "voice" => commands::voice::autocomplete(&context, &command, &self.speakers).await,
+                    _ => Ok(()),
+                }
+                .with_context(|| format!("failed to autocomplete /{}", command.data.name));
+
+                if let Err(error) = result {
+                    tracing::error!("failed to handle autocomplete of slash command\nError: {error:?}");
+                }
+            },
+            _ => {},
         }
     }
 
@@ -118,6 +134,7 @@ impl EventHandler for Handler {
                         commands::help::register(),
                         commands::join::register(),
                         commands::leave::register(),
+                        commands::voice::register(),
                     ],
                 )
                 .await;

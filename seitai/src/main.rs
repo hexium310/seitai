@@ -1,6 +1,6 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
-use anyhow::Result;
+use anyhow::{Context as _, Error, Result};
 use hashbrown::HashMap;
 use logging::initialize_logging;
 use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
@@ -11,11 +11,11 @@ use songbird::{
 };
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
-    ConnectOptions,
+    ConnectOptions, Pool, Postgres,
 };
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
-use voicevox::Voicevox;
+use voicevox::{speaker::response::GetSpeakersResult, Voicevox};
 
 mod character_converter;
 mod commands;
@@ -55,10 +55,27 @@ async fn main() {
         },
     };
 
+    let voicevox = match set_up_voicevox().await {
+        Ok(voicevox) => voicevox,
+        Err(error) => {
+            tracing::error!("failed to set up voicevox client\nError: {error:?}");
+            exit(1);
+        },
+    };
+
+    let speakers = match voicevox.speaker.list().await.unwrap() {
+        GetSpeakersResult::Ok(speakers) => speakers,
+        GetSpeakersResult::UnprocessableEntity(error) => {
+            tracing::error!("failed to get speakers\nError: {error:?}");
+            exit(1);
+        },
+    };
+
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
     let mut client = match Client::builder(token, intents)
         .event_handler(event_handler::Handler {
             database: pool,
+            speakers,
         })
         .register_songbird()
         .await
@@ -97,21 +114,6 @@ async fn main() {
         }
 
         data.insert::<SoundStore>(Arc::new(Mutex::new(audio_map)));
-
-        let voicevox_host = match env::var("VOICEVOX_HOST") {
-            Ok(voicevox_host) => voicevox_host,
-            Err(error) => {
-                tracing::error!("failed to fetch environment variable VOICEVOX_HOST\nError: {error:?}");
-                exit(1);
-            },
-        };
-        let voicevox = match Voicevox::build(&voicevox_host) {
-            Ok(voicevox) => voicevox,
-            Err(error) => {
-                tracing::error!("failed to build voicevox client\nError: {error:?}");
-                exit(1);
-            },
-        };
         data.insert::<VoicevoxClient>(Arc::new(Mutex::new(voicevox)));
     }
 
@@ -155,4 +157,9 @@ async fn set_up_database() -> Result<Pool<Postgres>> {
         .connect_with(pg_options)
         .await
         .map_err(Error::msg)
+}
+
+async fn set_up_voicevox() -> Result<Voicevox> {
+    let voicevox_host = env::var("VOICEVOX_HOST").context("failed to fetch environment variable VOICEVOX_HOST")?;
+    Voicevox::build(&voicevox_host).context("failed to build voicevox client")
 }
