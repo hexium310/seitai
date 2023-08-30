@@ -1,4 +1,4 @@
-use std::{env, process::exit, sync::Arc};
+use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use hashbrown::HashMap;
@@ -9,7 +9,12 @@ use songbird::{
     input::{cached::Compressed, File},
     SerenityInit,
 };
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    ConnectOptions,
+};
 use tokio::signal::unix::{signal, SignalKind};
+use tracing::log::LevelFilter;
 use voicevox::Voicevox;
 
 mod character_converter;
@@ -42,9 +47,19 @@ async fn main() {
         },
     };
 
+    let pool = match set_up_database().await {
+        Ok(pool) => pool,
+        Err(error) => {
+            tracing::error!("failed to set up postgres\nError: {error:?}");
+            exit(1);
+        },
+    };
+
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
     let mut client = match Client::builder(token, intents)
-        .event_handler(event_handler::Handler)
+        .event_handler(event_handler::Handler {
+            database: pool,
+        })
         .register_songbird()
         .await
     {
@@ -127,4 +142,17 @@ async fn set_up_audio(path: &'static str) -> Result<Compressed> {
     let _ = url.raw.spawn_loader();
 
     Ok(url)
+}
+
+async fn set_up_database() -> Result<Pool<Postgres>> {
+    let pg_options = PgConnectOptions::new()
+        .log_statements(LevelFilter::Debug)
+        .log_slow_statements(LevelFilter::Warn, Duration::from_millis(500));
+
+    PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(5))
+        .connect_with(pg_options)
+        .await
+        .map_err(Error::msg)
 }

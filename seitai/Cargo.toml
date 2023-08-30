@@ -23,6 +23,15 @@ workspace = true
 [dependencies.regex-lite]
 version = "0.1.0"
 
+[dependencies.sea-query]
+version = "0.30.0"
+default-features = false
+features = ["backend-postgres", "derive", "thread-safe"]
+
+[dependencies.sea-query-binder]
+version = "0.5.0"
+features = ["sqlx-postgres"]
+
 [dependencies.serenity]
 workspace = true
 features = ["builder", "collector"]
@@ -31,6 +40,10 @@ features = ["builder", "collector"]
 git = "https://github.com/serenity-rs/songbird.git"
 branch = "next"
 features = ["builtin-queue"]
+
+[dependencies.sqlx]
+version = "0.7.1"
+features = ["postgres", "runtime-tokio", "tls-native-tls"]
 
 [dependencies.symphonia]
 version = "0.5.2"

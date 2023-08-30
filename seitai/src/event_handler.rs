@@ -9,6 +9,7 @@ use serenity::{
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
+use sqlx::PgPool;
 use tracing::instrument;
 use voicevox::audio::AudioGenerator;
 
@@ -19,7 +20,9 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Handler;
+pub struct Handler {
+    pub(crate) database: PgPool,
+}
 
 enum Replacement {
     General(&'static Regex, &'static str),

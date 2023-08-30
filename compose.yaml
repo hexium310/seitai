@@ -29,8 +29,12 @@ services:
         read_only: true
     command: /bin/sh -c 'cargo run -p seitai'
     environment:
-      - DISCORD_TOKEN
-      - VOICEVOX_HOST=voicevox
+      DISCORD_TOKEN:
+      VOICEVOX_HOST: voicevox
+      PGHOST: database
+      PGDATABASE: seitai
+      PGUSER: seitai
+      PGPASSWORD: seitai
     depends_on:
       init_resource:
         condition: service_completed_successfully
@@ -76,3 +80,23 @@ services:
     command: /bin/sh -c 'cargo run -p restarter'
     environment:
       - DISCORD_TOKEN
+  database:
+    image: postgres:15.4
+    environment:
+      POSTGRES_DB: seitai
+      POSTGRES_USER: seitai
+      POSTGRES_PASSWORD: seitai
+    ports:
+      - '5432:5432'
+    volumes:
+      - type: bind
+        source: ./database
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+      - type: volume
+        source: database
+        target: /var/lib/postgresql/data
+
+volumes:
+  database:
+    driver: local
