@@ -1,11 +1,12 @@
 use anyhow::Result;
 use url::Url;
 
-use crate::{audio::AudioGenerator, dictionary::Dictionary};
+use crate::{audio::AudioGenerator, dictionary::Dictionary, speaker::Speaker};
 
 pub struct Voicevox {
     pub audio_generator: AudioGenerator,
     pub dictionary: Dictionary,
+    pub speaker: Speaker,
 }
 
 impl Voicevox {
@@ -17,7 +18,8 @@ impl Voicevox {
                 base: base.clone(),
                 default_speed: 1.2,
             },
-            dictionary: Dictionary { base },
+            dictionary: Dictionary { base: base.clone() },
+            speaker: Speaker { base },
         })
     }
 }
