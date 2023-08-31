@@ -40,8 +40,7 @@ pub(crate) async fn run(
                     .speaker_id
             )
             .context("failed to convert speaker_id to u16")?;
-            let speaker_tuples = to_speaker_tuples(speakers);
-            let speaker_name = &speaker_tuples.iter().find(|(_, id)| id == &speaker_id).context("")?.0;
+            let speaker_name = get_speaker_name(speakers, speaker_id)?;
 
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
@@ -51,6 +50,23 @@ pub(crate) async fn run(
             );
             respond(context, interaction, &message).await?;
         },
+        "reset" => {
+            let speaker_id = u16::try_from(
+                database::user::create(database, interaction.user.id.into(), 1)
+                    .await?
+                    .speaker_id
+            )
+            .context("failed to convert speaker_id to u16")?;
+            let speaker_name = get_speaker_name(speakers, speaker_id)?;
+
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                    .title("ボイスを変更しました。")
+                    .description(speaker_name)
+                    .colour(Colour::FOOYOO),
+            );
+            respond(context, interaction, &message).await?;
+        }
         _ => unreachable!(),
     }
 
@@ -69,9 +85,15 @@ pub fn register() -> CreateCommand {
             .description_localized("ja", "あなたのメッセージを読み上げるボイスを設定します。")
             .add_sub_option(voice)
     };
+
+    let reset = {
+        CreateCommandOption::new(CommandOptionType::SubCommand, "reset", "Resets voice that read aloud your message.")
+            .description_localized("ja", "あなたのメッセージを読み上げるボイスをリセットします。")
+    };
+
     CreateCommand::new("voice")
         .description("ボイスの設定を行います。")
-        .set_options(vec![r#use])
+        .set_options(vec![r#use, reset])
 }
 
 pub async fn autocomplete(context: &Context, interaction: &CommandInteraction, speakers: &[Speaker]) -> Result<()> {
@@ -117,4 +139,16 @@ fn to_speaker_tuples(speakers: &[Speaker]) -> Vec<(String, u16)> {
             })
         })
         .collect::<Vec<_>>()
+}
+
+fn get_speaker_name(speakers: &[Speaker], speaker_id: u16) -> Result<String> {
+    let speaker_tuples = to_speaker_tuples(speakers);
+    Ok(
+        speaker_tuples
+            .iter()
+            .find(|(_, id)| id == &speaker_id)
+            .context("cannot find speaker {speaker_id}")?
+            .0
+            .clone()
+    )
 }
