@@ -11,13 +11,14 @@ use songbird::{
 };
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
-    ConnectOptions, Pool, Postgres,
+    ConnectOptions, PgPool,
 };
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
 use voicevox::{speaker::response::GetSpeakersResult, Voicevox};
 
 mod character_converter;
+mod database;
 mod commands;
 mod event_handler;
 mod regex;
@@ -146,7 +147,7 @@ async fn set_up_audio(path: &'static str) -> Result<Compressed> {
     Ok(url)
 }
 
-async fn set_up_database() -> Result<Pool<Postgres>> {
+async fn set_up_database() -> Result<PgPool> {
     let pg_options = PgConnectOptions::new()
         .log_statements(LevelFilter::Debug)
         .log_slow_statements(LevelFilter::Warn, Duration::from_millis(500));

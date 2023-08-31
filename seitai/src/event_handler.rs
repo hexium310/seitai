@@ -15,6 +15,7 @@ use voicevox::{audio::AudioGenerator, speaker::response::Speaker};
 
 use crate::{
     commands,
+    database,
     regex,
     utils::{get_cached_audio, get_manager, get_voicevox, normalize},
 };
@@ -28,6 +29,8 @@ pub struct Handler {
 enum Replacement {
     General(&'static Regex, &'static str),
 }
+
+const SYSTEM_SPEAKER: &str = "1";
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -86,7 +89,18 @@ impl EventHandler for Handler {
             return;
         };
 
-        let speaker = "1";
+        let ids: Vec<i64> = vec![message.author.id.into()];
+        let speaker = match database::user::fetch_by_ids(&self.database, &ids).await {
+            Ok(users) => users
+                .first()
+                .unwrap_or(&database::User::default())
+                .speaker_id
+                .to_string(),
+            Err(error) => {
+                tracing::error!("failed to fetch users by ids: {ids:?}\nError: {error:?}");
+                return;
+            },
+        };
 
         let audio_generator = {
             let Some(voicevox) = get_voicevox(&context).await else {
@@ -103,7 +117,7 @@ impl EventHandler for Handler {
                 continue;
             }
 
-            match get_audio_source(&context, &audio_generator, text, speaker).await {
+            match get_audio_source(&context, &audio_generator, text, &speaker).await {
                 Ok(input) => {
                     call.enqueue_input(input).await;
                 },
@@ -292,8 +306,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
             let voicevox = voicevox.lock().await;
             voicevox.audio_generator.clone()
         };
-        let speaker = "1";
-        let audio = match audio_generator.generate(speaker, &text).await {
+        let audio = match audio_generator.generate(SYSTEM_SPEAKER, &text).await {
             Ok(audio) => audio,
             Err(error) => {
                 tracing::error!("failed to generate audio\nError: {error:?}");

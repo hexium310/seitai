@@ -20,6 +20,8 @@ use crate::{
     utils::{get_voicevox, normalize, respond, get_manager, get_cached_audio},
 };
 
+const SYSTEM_SPEAKER: &str = "1";
+
 pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let Some(guild_id) = interaction.guild_id else {
         return Ok(());
@@ -97,8 +99,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                         let voicevox = voicevox.lock().await;
                         voicevox.audio_generator.clone()
                     };
-                    let speaker = "1";
-                    let audio = match audio_generator.generate(speaker, word).await {
+                    let audio = match audio_generator.generate(SYSTEM_SPEAKER, word).await {
                         Ok(audio) => audio,
                         Err(error) => {
                             tracing::error!("failed to generate audio\nError: {error:?}");

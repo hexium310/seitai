@@ -1,6 +1,4 @@
 use anyhow::{Context as _, Result};
-use sea_query::{Iden, OnConflict, PostgresQueryBuilder, Query};
-use sea_query_binder::SqlxBinder;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
     builder::{
@@ -15,17 +13,10 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use voicevox::speaker::response::Speaker;
 
-use crate::utils::respond;
-
-#[derive(Iden)]
-enum Users {
-    Table,
-    Id,
-    SpeakerId,
-}
+use crate::{utils::respond, database};
 
 pub(crate) async fn run(
     context: &Context,
@@ -43,21 +34,10 @@ pub(crate) async fn run(
                     .context(format!("{:?} is not integer", subcommand.value))?,
             )?;
 
-            let (sql, values) = Query::insert()
-                .into_table(Users::Table)
-                .columns([Users::Id, Users::SpeakerId])
-                .values_panic([interaction.user.id.get().into(), speaker_id.into()])
-                .on_conflict(OnConflict::column(Users::Id).update_column(Users::SpeakerId).to_owned())
-                .returning_col(Users::SpeakerId)
-                .build_sqlx(PostgresQueryBuilder);
-            let mut connection = database.acquire().await?;
-            let row = sqlx::query_with(&sql, values)
-                .fetch_one(&mut *connection)
-                .await
-                .with_context(|| format!("failed to execute `{sql}`"))?;
             let speaker_id = u16::try_from(
-                row.try_get::<i32, _>("speaker_id")
-                    .context("failed to get speaker_id as i32 in users")?,
+                database::user::create(database, interaction.user.id.into(), speaker_id)
+                    .await?
+                    .speaker_id
             )
             .context("failed to convert speaker_id to u16")?;
             let speaker_tuples = to_speaker_tuples(speakers);
