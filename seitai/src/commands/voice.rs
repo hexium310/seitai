@@ -14,15 +14,14 @@ use serenity::{
     model::{application::CommandInteraction, Colour},
 };
 use sqlx::PgPool;
-use voicevox::speaker::response::Speaker;
 
-use crate::{utils::respond, database};
+use crate::{database, speaker::Speaker, utils::respond};
 
 pub(crate) async fn run(
     context: &Context,
     interaction: &CommandInteraction,
     database: &PgPool,
-    speakers: &[Speaker],
+    speaker: &Speaker,
 ) -> Result<()> {
     let subcommand = interaction.data.options.first().context("cannot get subcommand")?;
     match subcommand.name.as_str() {
@@ -37,10 +36,10 @@ pub(crate) async fn run(
             let speaker_id = u16::try_from(
                 database::user::create(database, interaction.user.id.into(), speaker_id)
                     .await?
-                    .speaker_id
+                    .speaker_id,
             )
             .context("failed to convert speaker_id to u16")?;
-            let speaker_name = get_speaker_name(speakers, speaker_id)?;
+            let speaker_name = speaker.get_name(speaker_id)?;
 
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
@@ -54,10 +53,10 @@ pub(crate) async fn run(
             let speaker_id = u16::try_from(
                 database::user::create(database, interaction.user.id.into(), 1)
                     .await?
-                    .speaker_id
+                    .speaker_id,
             )
             .context("failed to convert speaker_id to u16")?;
-            let speaker_name = get_speaker_name(speakers, speaker_id)?;
+            let speaker_name = speaker.get_name(speaker_id)?;
 
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
@@ -66,7 +65,7 @@ pub(crate) async fn run(
                     .colour(Colour::FOOYOO),
             );
             respond(context, interaction, &message).await?;
-        }
+        },
         _ => unreachable!(),
     }
 
@@ -96,14 +95,16 @@ pub fn register() -> CreateCommand {
         .set_options(vec![r#use, reset])
 }
 
-pub async fn autocomplete(context: &Context, interaction: &CommandInteraction, speakers: &[Speaker]) -> Result<()> {
+pub(crate) async fn autocomplete(context: &Context, interaction: &CommandInteraction, speaker: &Speaker) -> Result<()> {
     let subcommand = interaction.data.options.first().context("cannot get subcommand")?;
-    let speaker = get_subcommand_option(&subcommand.value, "speaker").context("cannot get speaker from argument")?;
+    let speaker_id = get_subcommand_option(&subcommand.value, "speaker").context("cannot get speaker from argument")?;
 
-    if let CommandDataOptionValue::Autocomplete { value, .. } = &speaker {
-        let choices = to_speaker_tuples(speakers)
-            .into_iter()
-            .filter_map(|(name, id)| name.contains(value).then_some(Some(AutocompleteChoice::new(name, id))))
+    if let CommandDataOptionValue::Autocomplete { value, .. } = &speaker_id {
+        let choices = speaker
+            .pairs()
+            .filter_map(|(name_pairs, id)| {
+                name_pairs.contains(value).then_some(Some(AutocompleteChoice::new(format!("{name_pairs}"), id)))
+            })
             .flatten()
             .take(25)
             .collect::<Vec<_>>();
@@ -127,28 +128,4 @@ fn get_subcommand_option<'a>(value: &'a CommandDataOptionValue, name: &str) -> O
             .map(|option| &option.value),
         _ => None,
     }
-}
-
-fn to_speaker_tuples(speakers: &[Speaker]) -> Vec<(String, u16)> {
-    speakers
-        .iter()
-        .flat_map(|speaker| {
-            speaker.styles.iter().map(|style| {
-                let name = format!("{}（{}）", speaker.name, style.name);
-                (name, style.id)
-            })
-        })
-        .collect::<Vec<_>>()
-}
-
-fn get_speaker_name(speakers: &[Speaker], speaker_id: u16) -> Result<String> {
-    let speaker_tuples = to_speaker_tuples(speakers);
-    Ok(
-        speaker_tuples
-            .iter()
-            .find(|(_, id)| id == &speaker_id)
-            .context("cannot find speaker {speaker_id}")?
-            .0
-            .clone()
-    )
 }

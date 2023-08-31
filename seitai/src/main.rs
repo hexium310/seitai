@@ -11,17 +11,21 @@ use songbird::{
 };
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
-    ConnectOptions, PgPool,
+    ConnectOptions,
+    PgPool,
 };
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
-use voicevox::{speaker::response::GetSpeakersResult, Voicevox};
+use voicevox::Voicevox;
+
+use crate::speaker::Speaker;
 
 mod character_converter;
-mod database;
 mod commands;
+mod database;
 mod event_handler;
 mod regex;
+mod speaker;
 mod utils;
 
 struct SoundStore;
@@ -64,10 +68,10 @@ async fn main() {
         },
     };
 
-    let speakers = match voicevox.speaker.list().await.unwrap() {
-        GetSpeakersResult::Ok(speakers) => speakers,
-        GetSpeakersResult::UnprocessableEntity(error) => {
-            tracing::error!("failed to get speakers\nError: {error:?}");
+    let speaker = match Speaker::build(&voicevox).await {
+        Ok(speaker) => speaker,
+        Err(error) => {
+            tracing::error!("failed to build speaker\nError: {error:?}");
             exit(1);
         },
     };
@@ -76,7 +80,7 @@ async fn main() {
     let mut client = match Client::builder(token, intents)
         .event_handler(event_handler::Handler {
             database: pool,
-            speakers,
+            speaker,
         })
         .register_songbird()
         .await

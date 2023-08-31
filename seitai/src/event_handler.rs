@@ -11,19 +11,20 @@ use serenity::{
 use songbird::{input::Input, Call};
 use sqlx::PgPool;
 use tracing::instrument;
-use voicevox::{audio::AudioGenerator, speaker::response::Speaker};
+use voicevox::audio::AudioGenerator;
 
 use crate::{
     commands,
     database,
     regex,
+    speaker::Speaker,
     utils::{get_cached_audio, get_manager, get_voicevox, normalize},
 };
 
 #[derive(Debug)]
 pub struct Handler {
     pub(crate) database: PgPool,
-    pub(crate) speakers: Vec<Speaker>,
+    pub(crate) speaker: Speaker,
 }
 
 enum Replacement {
@@ -42,7 +43,7 @@ impl EventHandler for Handler {
                     "help" => commands::help::run(&context, &command).await,
                     "join" => commands::join::run(&context, &command).await,
                     "leave" => commands::leave::run(&context, &command).await,
-                    "voice" => commands::voice::run(&context, &command, &self.database, &self.speakers).await,
+                    "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
                     _ => Ok(()),
                 }
                 .with_context(|| format!("failed to execute /{}", command.data.name));
@@ -53,7 +54,7 @@ impl EventHandler for Handler {
             },
             Interaction::Autocomplete(command) => {
                 let result = match command.data.name.as_str() {
-                    "voice" => commands::voice::autocomplete(&context, &command, &self.speakers).await,
+                    "voice" => commands::voice::autocomplete(&context, &command, &self.speaker).await,
                     _ => Ok(()),
                 }
                 .with_context(|| format!("failed to autocomplete /{}", command.data.name));
