@@ -1,7 +1,7 @@
 use lazy_regex::{lazy_regex, Lazy, Regex};
 
 pub(crate) static CODE: Lazy<Regex> = lazy_regex!(r"(?:`[^`]+`|```[^`]+```)");
-pub(crate) static EMOJI: Lazy<Regex> = lazy_regex!(r"<:([[:word:]]+):\d+>");
+pub(crate) static EMOJI: Lazy<Regex> = lazy_regex!(r"<(?::a)?:([[:word:]]+):\d+>");
 pub(crate) static FULL_GRAPHICAL_AND_IDEOGRAPHIC_SPACE: Lazy<Regex> = lazy_regex!(r"[\u3000！-～]+");
 pub(crate) static HALF_GRAPHICAL: Lazy<Regex> = lazy_regex!(r"[!-~]+");
 pub(crate) static HIRAGANA: Lazy<Regex> = lazy_regex!(r"[ぁ-ゖ]+");
