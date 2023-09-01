@@ -1,6 +1,7 @@
 [workspace]
 members = ["seitai", "restarter"]
 default-members = ["seitai"]
+resolver = "2"
 
 [workspace.dependencies.anyhow]
 version = "1.0.75"
