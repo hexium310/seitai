@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use anyhow::{Error, Result};
 use sea_query::{OnConflict, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
-use serenity::futures::TryStreamExt;
 use sqlx::{FromRow, PgPool};
 
 use super::identifier;
