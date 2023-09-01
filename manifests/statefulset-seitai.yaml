@@ -40,6 +40,17 @@ spec:
                 secretKeyRef:
                   name: seitai-secret
                   key: token
+            - name: PGHOST
+              value: seitai-database
+            - name: PGDATABASE
+              value: seitai
+            - name: PGUSER
+              value: seitai
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: seitai.seitai-database.credentials.postgresql.acid.zalan.do
+                  key: password
           volumeMounts:
             - mountPath: /resources/
               name: seitai-resources
