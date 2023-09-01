@@ -66,7 +66,7 @@ impl AudioGenerator {
         }
     }
 
-    pub async fn generate(&self, speaker: &str, text: &str) -> Result<Audio> {
+    pub async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Audio> {
         let mut audio_query = match self
             .generate_query(speaker, text)
             .await
@@ -79,7 +79,7 @@ impl AudioGenerator {
         };
 
         // TODO: Truncate message too long
-        audio_query.speed_scale = self.default_speed + (text.len() / 50) as f32 * 0.1;
+        audio_query.speed_scale = speed + (text.len() / 50) as f32 * 0.1;
 
         let json = serde_json::to_string(&audio_query)?;
         match self

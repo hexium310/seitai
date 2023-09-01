@@ -50,6 +50,10 @@ impl Speaker {
         Self::to_speaker_tuples(&self.speakers)
     }
 
+    pub(crate) fn default_speed() -> f32 {
+        1.2
+    }
+
     fn to_speaker_tuples(speakers: &[VoicevoxSpeaker]) -> impl Iterator<Item = (NamePair, u16)> + '_ {
         speakers.iter().flat_map(|speaker| {
             speaker.styles.iter().map(|style| {

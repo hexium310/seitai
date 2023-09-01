@@ -7,3 +7,11 @@ pub(crate) enum User {
     Id,
     SpeakerId,
 }
+
+#[derive(Iden)]
+pub(crate) enum Speaker {
+    #[iden = "speakers"]
+    Table,
+    Id,
+    Speed,
+}

@@ -17,6 +17,7 @@ use voicevox::dictionary::{
 use crate::{
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
+    speaker::Speaker,
     utils::{get_voicevox, normalize, respond, get_manager, get_cached_audio},
 };
 
@@ -99,7 +100,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                         let voicevox = voicevox.lock().await;
                         voicevox.audio_generator.clone()
                     };
-                    let audio = match audio_generator.generate(SYSTEM_SPEAKER, word).await {
+                    let audio = match audio_generator.generate(SYSTEM_SPEAKER, word, Speaker::default_speed()).await {
                         Ok(audio) => audio,
                         Err(error) => {
                             tracing::error!("failed to generate audio\nError: {error:?}");

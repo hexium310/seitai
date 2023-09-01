@@ -112,13 +112,22 @@ impl EventHandler for Handler {
             voicevox.audio_generator.clone()
         };
 
+        let default = database::UserSpeaker::default();
+        let speed = match database::user::fetch_with_speaker_by_ids(&self.database, &[message.author.id.into()]).await {
+            Ok(speakers) => speakers.first().unwrap_or(&default).speed.or(default.speed).unwrap_or(1.2),
+            Err(error) => {
+                tracing::error!("failed to fetch speakers\nError: {error:?}");
+                return;
+            }
+        };
+
         for text in replace_message(&context, &message).split('\n') {
             let text = text.trim();
             if text.is_empty() {
                 continue;
             }
 
-            match get_audio_source(&context, &audio_generator, text, &speaker).await {
+            match get_audio_source(&context, &audio_generator, text, &speaker, speed).await {
                 Ok(input) => {
                     call.enqueue_input(input).await;
                 },
@@ -244,6 +253,7 @@ async fn get_audio_source(
     audio_generator: &AudioGenerator,
     text: &str,
     speaker: &str,
+    speed: f32,
 ) -> Result<Input> {
     match text {
         "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE")
@@ -254,7 +264,7 @@ async fn get_audio_source(
             .context("failed to get cached audio \"URL\""),
         _ => {
             let audio = audio_generator
-                .generate(speaker, text)
+                .generate(speaker, text, speed)
                 .await
                 .with_context(|| format!("failed to generate audio with {text}"))?;
             Ok(Input::from(audio))
@@ -307,7 +317,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
             let voicevox = voicevox.lock().await;
             voicevox.audio_generator.clone()
         };
-        let audio = match audio_generator.generate(SYSTEM_SPEAKER, &text).await {
+        let audio = match audio_generator.generate(SYSTEM_SPEAKER, &text, Speaker::default_speed()).await {
             Ok(audio) => audio,
             Err(error) => {
                 tracing::error!("failed to generate audio\nError: {error:?}");
