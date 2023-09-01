@@ -33,11 +33,6 @@ pub(crate) async fn run(
                     .context(format!("{:?} is not integer", subcommand.value))?,
             )?;
 
-            // let i = get_subcommand_option(&subcommand.value, "speaker")
-            //     .context("cannot get speaker id from `/voice use` argument")?
-            //     .as_i64()
-            //     .context(format!("{:?} is not integer", subcommand.value))?;
-            //
             let speaker_id = u16::try_from(
                 database::user::create(database, interaction.user.id.into(), speaker_id)
                     .await?
