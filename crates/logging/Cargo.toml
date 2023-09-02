@@ -9,4 +9,4 @@ features = ["macros"]
 
 [dependencies.tracing-subscriber]
 version = "0.3.17"
-features = ["env-filter", "local-time"]
+features = ["env-filter", "time"]
