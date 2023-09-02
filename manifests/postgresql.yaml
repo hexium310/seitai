@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://github.com/chitoku-k/kubernetes-crds-json-schema/raw/master/schemas/acid.zalan.do/v1/postgresql_v1.json
+apiVersion: acid.zalan.do/v1
+kind: postgresql
+metadata:
+  name: seitai-database
+spec:
+  teamId: seitai
+  numberOfInstances: 2
+  users:
+    default:
+      - superuser
+      - createdb
+    seitai:
+      - login
+  databases:
+    seitai: default
+  spiloFSGroup: 103
+  enableShmVolume: true
+  resources:
+    requests:
+      cpu: 10m
+      memory: 100Mi
+    limits:
+      cpu: '1'
+      memory: 500Mi
+  volume:
+    size: 1Gi
+  postgresql:
+    version: '15'
