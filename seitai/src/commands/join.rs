@@ -5,7 +5,12 @@ use serenity::{
     model::{application::CommandInteraction, Colour},
 };
 
-use crate::utils::{get_cached_audio, get_guild, get_manager, respond};
+use crate::{
+    sound::CacheKey,
+    speaker::Speaker,
+    utils::{get_guild, get_manager, respond},
+    SoundStore,
+};
 
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let guild = match get_guild(context, interaction) {
@@ -47,20 +52,28 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     };
     join.await?;
 
-    {
-        let mut call = call.lock().await;
-        let audio = get_cached_audio(context, "connected")
-            .await
-            .context("failed to get cached audio \"connected\"")?;
-        call.enqueue_input(audio).await;
-    }
-
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()
             .description("ボイスチャンネルに接続しました。")
             .colour(Colour::FOOYOO),
     );
     respond(context, interaction, &message).await?;
+
+    {
+        let mut call = call.lock().await;
+        let data = context.data.read().await;
+        let mut sound = data
+            .get::<SoundStore>()
+            .context("failed to get sound store")?
+            .lock()
+            .await;
+
+        let input = sound
+            .generate(CacheKey::Connected.as_str(), "1", Speaker::default_speed())
+            .await
+            .context("failed to get audio source")?;
+        call.enqueue_input(input).await;
+    }
     Ok(())
 }
 

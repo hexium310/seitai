@@ -1,24 +1,26 @@
 use std::borrow::Cow;
 
-use anyhow::{Context as _, Result};
+use anyhow::Context as _;
 use lazy_regex::Regex;
 use serenity::{
     all::{ChannelId as SerenityChannelId, ChannelType, VoiceState},
     async_trait,
     client::{Context, EventHandler},
+    futures::{future::join_all, StreamExt},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
-use songbird::{input::Input, Call};
+use songbird::Call;
 use sqlx::PgPool;
 use tracing::instrument;
-use voicevox::audio::AudioGenerator;
 
 use crate::{
     commands,
     database,
     regex,
+    sound::CacheKey,
     speaker::Speaker,
-    utils::{get_cached_audio, get_manager, get_voicevox, normalize},
+    utils::{get_manager, normalize},
+    SoundStore,
 };
 
 #[derive(Debug)]
@@ -103,43 +105,53 @@ impl EventHandler for Handler {
             },
         };
 
-        let audio_generator = {
-            let Some(voicevox) = get_voicevox(&context).await else {
-                tracing::error!("failed to get voicevox client to handle message");
-                return;
-            };
-            let voicevox = voicevox.lock().await;
-            voicevox.audio_generator.clone()
-        };
-
         let default = database::UserSpeaker::default();
         let speed = match database::user::fetch_with_speaker_by_ids(&self.database, &[message.author.id.into()]).await {
-            Ok(speakers) => speakers.first().unwrap_or(&default).speed.or(default.speed).unwrap_or(1.2),
+            Ok(speakers) => speakers
+                .first()
+                .unwrap_or(&default)
+                .speed
+                .or(default.speed)
+                .unwrap_or(1.2),
             Err(error) => {
                 tracing::error!("failed to fetch speakers\nError: {error:?}");
                 return;
-            }
+            },
         };
 
-        for text in replace_message(&context, &message).split('\n') {
-            let text = text.trim();
-            if text.is_empty() {
-                continue;
+        {
+            let data = context.data.read().await;
+            let Some(sound) = data.get::<SoundStore>() else {
+                tracing::error!("failed to get sound store on message");
+                return;
+            };
+            let mut sound = sound.lock().await;
+
+            for text in replace_message(&context, &message).split('\n') {
+                let text = text.trim();
+                if text.is_empty() {
+                    continue;
+                }
+
+                match sound.generate(text, &speaker, speed).await {
+                    Ok(input) => {
+                        call.enqueue_input(input).await;
+                    },
+                    Err(error) => {
+                        tracing::error!("failed to get audio source\nError: {error:?}");
+                    },
+                };
             }
 
-            match get_audio_source(&context, &audio_generator, text, &speaker, speed).await {
-                Ok(input) => {
-                    call.enqueue_input(input).await;
-                },
-                Err(error) => {
-                    tracing::error!("failed to get audio source\nError: {error:?}");
-                },
-            };
-        }
-
-        if !message.attachments.is_empty() {
-            if let Some(audio) = get_cached_audio(&context, "attachment").await {
-                call.enqueue_input(audio).await;
+            if !message.attachments.is_empty() {
+                match sound.generate(CacheKey::Attachment.as_str(), &speaker, speed).await {
+                    Ok(input) => {
+                        call.enqueue_input(input).await;
+                    },
+                    Err(error) => {
+                        tracing::error!("failed to get audio source\nError: {error:?}");
+                    },
+                };
             }
         }
     }
@@ -248,30 +260,6 @@ impl EventHandler for Handler {
     }
 }
 
-async fn get_audio_source(
-    context: &Context,
-    audio_generator: &AudioGenerator,
-    text: &str,
-    speaker: &str,
-    speed: f32,
-) -> Result<Input> {
-    match text {
-        "{{seitai::replacement::CODE}}" => get_cached_audio(context, "CODE")
-            .await
-            .context("failed to get cached audio \"CODE\""),
-        "{{seitai::replacement::URL}}" => get_cached_audio(context, "URL")
-            .await
-            .context("failed to get cached audio \"URL\""),
-        _ => {
-            let audio = audio_generator
-                .generate(speaker, text, speed)
-                .await
-                .with_context(|| format!("failed to generate audio with {text}"))?;
-            Ok(Input::from(audio))
-        },
-    }
-}
-
 fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> {
     let Some(guild_id) = message.guild_id else {
         return Cow::Borrowed(&message.content);
@@ -299,36 +287,33 @@ fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> 
 }
 
 async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, is_bot_connected: bool) {
-    let get_user_is = async {
-        if is_bot_connected {
-            return None;
-        }
+    let user_is = (!is_bot_connected)
+        .then(|| {
+            let member = state.member.as_ref()?;
+            let user = &member.user;
+            let name = member.nick.as_ref().or(user.global_name.as_ref()).unwrap_or(&user.name);
+            Some(format!("{name}さんが"))
+        })
+        .flatten();
+    let connected = Some(CacheKey::Connected.as_str().to_string());
 
-        let member = state.member.as_ref()?;
-        let user = &member.user;
-        let name = member.nick.as_ref().or(user.global_name.as_ref()).unwrap_or(&user.name);
-        let text = format!("{name}さんが");
+    let inputs = serenity::futures::stream::iter([user_is, connected].into_iter().flatten())
+        .map(|text| async move {
+            let data = context.data.read().await;
+            let mut sound = data.get::<SoundStore>().unwrap().lock().await;
 
-        let audio_generator = {
-            let Some(voicevox) = get_voicevox(context).await else {
-                tracing::error!("failed to get voicevox client to handle connect");
-                return None;
-            };
-            let voicevox = voicevox.lock().await;
-            voicevox.audio_generator.clone()
-        };
-        let audio = match audio_generator.generate(SYSTEM_SPEAKER, &text, Speaker::default_speed()).await {
-            Ok(audio) => audio,
-            Err(error) => {
-                tracing::error!("failed to generate audio\nError: {error:?}");
-                return None;
-            },
-        };
-        Some(Input::from(audio))
-    };
+            match sound.generate(&text, SYSTEM_SPEAKER, Speaker::default_speed()).await {
+                Ok(input) => Some(input),
+                Err(error) => {
+                    tracing::error!("failed to get audio source\nError: {error:?}");
+                    None
+                },
+            }
+        })
+        .collect::<Vec<_>>()
+        .await;
 
-    let (user_is, connected) = tokio::join!(get_user_is, get_cached_audio(context, "connected"));
-    for audio in [user_is, connected].into_iter().flatten() {
-        call.enqueue_input(audio).await;
+    for input in join_all(inputs).await.into_iter().flatten() {
+        call.enqueue_input(input).await;
     }
 }
