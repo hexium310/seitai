@@ -20,6 +20,9 @@ features = ["lite"]
 [dependencies.logging]
 workspace = true
 
+[dependencies.ordered-float]
+version = "3.9.1"
+
 [dependencies.regex-lite]
 version = "0.1.0"
 
