@@ -1,6 +1,7 @@
 use anyhow::{bail, Context as _, Result};
 use hashbrown::HashMap;
 use indexmap::IndexMap;
+use ordered_float::NotNan;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
     builder::{CreateCommand, CreateCommandOption, CreateEmbed, CreateInteractionResponseMessage},
@@ -17,7 +18,7 @@ use voicevox::dictionary::{
 use crate::{
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
-    sound::CacheKey,
+    sound::{Audio, CacheKey},
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize, respond},
     SoundStore,
@@ -98,7 +99,12 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                         let data = context.data.read().await;
                         let mut sound = data.get::<SoundStore>().unwrap().lock().await;
 
-                        match sound.generate(text, SYSTEM_SPEAKER, Speaker::default_speed()).await {
+                        let audio = Audio {
+                            text: text.to_string(),
+                            speaker: SYSTEM_SPEAKER.to_string(),
+                            speed: NotNan::new(Speaker::default_speed()).unwrap(),
+                        };
+                        match sound.get(audio).await {
                             Ok(input) => Some(input),
                             Err(error) => {
                                 tracing::error!("failed to get audio source\nError: {error:?}");

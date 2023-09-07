@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use ordered_float::NotNan;
 use serenity::{
     builder::{CreateCommand, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
@@ -6,7 +7,7 @@ use serenity::{
 };
 
 use crate::{
-    sound::CacheKey,
+    sound::{Audio, CacheKey},
     speaker::Speaker,
     utils::{get_guild, get_manager, respond},
     SoundStore,
@@ -68,8 +69,13 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             .lock()
             .await;
 
+        let audio = Audio {
+            text: CacheKey::Connected.as_str().to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::new(Speaker::default_speed()).unwrap(),
+        };
         let input = sound
-            .generate(CacheKey::Connected.as_str(), "1", Speaker::default_speed())
+            .get(audio)
             .await
             .context("failed to get audio source")?;
         call.enqueue_input(input).await;

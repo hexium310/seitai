@@ -1,14 +1,9 @@
-use std::{str::FromStr, hash::Hash};
+use std::{str::FromStr, hash::Hash, marker::PhantomData};
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
+use async_trait::async_trait;
 use hashbrown::HashMap;
 use ordered_float::NotNan;
-use serenity::async_trait;
-use songbird::{
-    driver::Bitrate,
-    input::{cached::Compressed, Input},
-};
-use voicevox::{audio::AudioGenerator, Bytes};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum CacheKey {
@@ -19,12 +14,6 @@ pub(crate) enum CacheKey {
     Registered,
 }
 
-#[derive(Clone)]
-enum Sound1 {
-    Compressed(Compressed),
-    Raw(Bytes),
-}
-
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) struct Audio {
     pub(crate) text: String,
@@ -32,68 +21,100 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-struct VoicevoxAudioRepository<G, P, S> {
-    caches: HashMap<Audio, S>,
+pub(crate) struct VoicevoxAudioRepository<G, P, C, S> {
     audio_generator: G,
     audio_processor: P,
+    cache: HashMap<Audio, C>,
+    phantom: PhantomData<fn() -> S>,
 }
 
 #[async_trait]
-trait AudioRepository<S> {
+pub(crate) trait AudioRepository<S> {
     async fn get(&mut self, audio: Audio) -> Result<S>;
 }
 
 #[async_trait]
-trait AudioGenerator1 {
-    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Bytes>;
+pub(crate) trait AudioGenerator<S> {
+    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<S>;
 }
 
 #[async_trait]
-trait AudioProcessor {
-    async fn compress(&self, input: Bytes) -> Result<Compressed>;
+trait AudioProcessor<R, C> {
+    async fn compress(&self, raw: R) -> Result<C>;
+    fn raw(&self, compressed: &C) -> R;
 }
 
-trait SoundRepository
-where
-    Self: From<Bytes> + From<Compressed>,
-{}
-
-impl SoundRepository for Sound1 {}
-
-impl From<Bytes> for Sound1 {
-    fn from(value: Bytes) -> Self {
-        Self::Raw(value)
-    }
-}
-
-impl From<Compressed> for Sound1 {
-    fn from(value: Compressed) -> Self {
-        Self::Compressed(value)
+impl<G, P, C, S> VoicevoxAudioRepository<G, P, C, S> {
+    pub(crate) fn new(audio_generator: G, audio_processor: P) -> Self {
+        Self {
+            audio_generator,
+            audio_processor,
+            cache: HashMap::new(),
+            phantom: PhantomData,
+        }
     }
 }
 
 #[async_trait]
-impl<G, P, S> AudioRepository<S> for VoicevoxAudioRepository<G, P, S>
+impl<G, P, C, S> AudioRepository<S> for VoicevoxAudioRepository<G, P, C, S>
 where
-    G: AudioGenerator1 + Sync + Send,
-    P: AudioProcessor + Sync + Send,
-    S: SoundRepository + Clone + Sync + Send,
+    G: AudioGenerator<S> + Send + Sync,
+    P: AudioProcessor<S, C> + Send + Sync,
+    C: Send,
+    S: Send,
 {
     async fn get(&mut self, audio: Audio) -> Result<S> {
-        if let Some(sound) = self.caches.get(&audio) {
-            return Ok(sound.clone());
+        if let Some(sound) = self.cache.get(&audio) {
+            let raw = self.audio_processor.raw(&sound);
+            return Ok(raw.into());
         }
 
         let raw = self.audio_generator.generate(&audio.speaker, &audio.text, *audio.speed).await?;
 
         if CacheKey::from_str(&audio.text).is_ok() {
-            let compressed = self.audio_processor.compress(raw.clone()).await?;
-            self.caches.insert(audio, S::from(compressed));
+            let compressed = self.audio_processor.compress(raw).await?;
+            let raw = self.audio_processor.raw(&compressed);
+            self.cache.insert(audio, compressed);
+            return Ok(raw);
         }
 
-        Ok(S::from(raw))
+        Ok(raw)
     }
 }
+
+// TODO: 別のモジュールに移動する
+const _: () = {
+    use songbird::input::Input;
+
+    #[async_trait]
+    impl AudioGenerator<Input> for voicevox::audio::AudioGenerator {
+        async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Input> {
+            let audio = self.generate(speaker, text, speed).await?;
+            Ok(audio.into())
+        }
+    }
+};
+
+// TODO: 別のモジュールに移動する
+pub(crate) struct SongbirdAudioProcessor;
+
+const _: () = {
+    use songbird::{driver::Bitrate, input::{cached::Compressed, Input}};
+
+    #[async_trait]
+    impl AudioProcessor<Input, Compressed> for SongbirdAudioProcessor {
+        async fn compress(&self, raw: Input) -> Result<Compressed> {
+            let compressed = Compressed::new(raw, Bitrate::BitsPerSecond(128_000)).await?;
+            let _ = compressed.raw.spawn_loader();
+
+            Ok(compressed)
+        }
+
+        fn raw(&self, compressed: &Compressed) -> Input {
+            compressed.new_handle().into()
+        }
+    }
+};
 
 impl FromStr for CacheKey {
     type Err = ();
@@ -110,21 +131,6 @@ impl FromStr for CacheKey {
     }
 }
 
-
-//
-// Old
-//
-
-type Speaker = String;
-type Sounds = HashMap<Speaker, Compressed>;
-type Caches = HashMap<CacheKey, Sounds>;
-
-#[derive(Clone)]
-pub(crate) struct Sound {
-    pub(crate) caches: Caches,
-    audio_generator: AudioGenerator,
-}
-
 impl CacheKey {
     pub(crate) fn as_str(&self) -> &str {
         match self {
@@ -134,53 +140,5 @@ impl CacheKey {
             Self::Attachment => "添付ファイル",
             Self::Registered => "を登録しました",
         }
-    }
-}
-
-impl Sound {
-    pub(crate) fn new(audio_generator: &AudioGenerator, caches: Caches) -> Self {
-        Self {
-            caches,
-            audio_generator: audio_generator.clone(),
-        }
-    }
-
-    pub(crate) async fn compress(input: Input) -> Result<Compressed> {
-        let audio = Compressed::new(input, Bitrate::BitsPerSecond(128_000)).await?;
-        let _ = audio.raw.spawn_loader();
-
-        Ok(audio)
-    }
-
-    pub(crate) fn store(&mut self, key: CacheKey, speaker: impl Into<String>, sound: Compressed) {
-        self.caches.entry(key).or_default().insert(speaker.into(), sound);
-    }
-
-    pub(crate) async fn generate(&mut self, text: &str, speaker: &str, speed: f32) -> Result<Input> {
-        let cache_key = CacheKey::from_str(text);
-
-        let sound = match cache_key
-            .as_ref()
-            .ok()
-            .and_then(|key| self.caches.get(key).and_then(|sound| sound.get(speaker)))
-        {
-            Some(sound) => sound.new_handle().into(),
-            None => {
-                let bytes = self
-                    .audio_generator
-                    .generate(speaker, text, speed)
-                    .await
-                    .with_context(|| format!("failed to generate audio with {text}"))?;
-
-                if let Ok(key) = cache_key {
-                    self.store(key, speaker, Self::compress(bytes.clone().into()).await?);
-                    tracing::info!("cached {text} with speaker = {speaker}");
-                }
-
-                bytes.into()
-            },
-        };
-
-        Ok(sound)
     }
 }

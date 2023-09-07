@@ -1,10 +1,9 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Error, Result};
-use hashbrown::HashMap;
 use logging::initialize_logging;
 use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
-use songbird::SerenityInit;
+use songbird::{input::Input, SerenityInit};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
@@ -14,7 +13,7 @@ use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
 use voicevox::Voicevox;
 
-use crate::{sound::Sound, speaker::Speaker};
+use crate::{sound::{AudioRepository, SongbirdAudioProcessor, VoicevoxAudioRepository}, speaker::Speaker};
 
 mod character_converter;
 mod commands;
@@ -28,7 +27,7 @@ mod utils;
 struct SoundStore;
 
 impl TypeMapKey for SoundStore {
-    type Value = Arc<Mutex<Sound>>;
+    type Value = Arc<Mutex<dyn AudioRepository<Input> + Send>>;
 }
 
 struct VoicevoxClient;
@@ -89,7 +88,7 @@ async fn main() {
         },
     };
 
-    let sound = Sound::new(&voicevox.audio_generator, HashMap::new());
+    let sound = VoicevoxAudioRepository::new(voicevox.audio_generator.clone(), SongbirdAudioProcessor);
 
     {
         let mut data = client.data.write().await;

@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use anyhow::Context as _;
 use lazy_regex::Regex;
+use ordered_float::NotNan;
 use serenity::{
     all::{ChannelId as SerenityChannelId, ChannelType, VoiceState},
     async_trait,
@@ -17,7 +18,7 @@ use crate::{
     commands,
     database,
     regex,
-    sound::CacheKey,
+    sound::{Audio, CacheKey},
     speaker::Speaker,
     utils::{get_manager, normalize},
     SoundStore,
@@ -133,7 +134,12 @@ impl EventHandler for Handler {
                     continue;
                 }
 
-                match sound.generate(text, &speaker, speed).await {
+                let audio = Audio {
+                    text: text.to_string(),
+                    speaker: speaker.clone(),
+                    speed: NotNan::new(speed).unwrap(),
+                };
+                match sound.get(audio).await {
                     Ok(input) => {
                         call.enqueue_input(input).await;
                     },
@@ -144,7 +150,12 @@ impl EventHandler for Handler {
             }
 
             if !message.attachments.is_empty() {
-                match sound.generate(CacheKey::Attachment.as_str(), &speaker, speed).await {
+                let audio = Audio {
+                    text: CacheKey::Attachment.as_str().to_string(),
+                    speaker: speaker.clone(),
+                    speed: NotNan::new(speed).unwrap(),
+                };
+                match sound.get(audio).await {
                     Ok(input) => {
                         call.enqueue_input(input).await;
                     },
@@ -302,7 +313,12 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
             let data = context.data.read().await;
             let mut sound = data.get::<SoundStore>().unwrap().lock().await;
 
-            match sound.generate(&text, SYSTEM_SPEAKER, Speaker::default_speed()).await {
+            let audio = Audio {
+                text,
+                speaker: SYSTEM_SPEAKER.to_string(),
+                speed: NotNan::new(Speaker::default_speed()).unwrap(),
+            };
+            match sound.get(audio).await {
                 Ok(input) => Some(input),
                 Err(error) => {
                     tracing::error!("failed to get audio source\nError: {error:?}");
