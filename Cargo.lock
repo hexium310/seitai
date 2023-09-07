@@ -2195,7 +2195,6 @@ name = "seitai"
 version = "0.1.13"
 dependencies = [
  "anyhow",
- "async-trait",
  "hashbrown 0.14.0",
  "indexmap 2.0.0",
  "lazy-regex",

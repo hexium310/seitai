@@ -1,9 +1,9 @@
 use std::{str::FromStr, hash::Hash, marker::PhantomData};
 
 use anyhow::Result;
-use async_trait::async_trait;
 use hashbrown::HashMap;
 use ordered_float::NotNan;
+use serenity::async_trait;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum CacheKey {
@@ -21,11 +21,11 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<G, P, C, S> {
+pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
     audio_generator: G,
     audio_processor: P,
     cache: HashMap<Audio, C>,
-    phantom: PhantomData<fn() -> S>,
+    phantom: PhantomData<fn() -> I>,
 }
 
 #[async_trait]
@@ -44,7 +44,7 @@ trait AudioProcessor<R, C> {
     fn raw(&self, compressed: &C) -> R;
 }
 
-impl<G, P, C, S> VoicevoxAudioRepository<G, P, C, S> {
+impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
     pub(crate) fn new(audio_generator: G, audio_processor: P) -> Self {
         Self {
             audio_generator,
@@ -56,17 +56,17 @@ impl<G, P, C, S> VoicevoxAudioRepository<G, P, C, S> {
 }
 
 #[async_trait]
-impl<G, P, C, S> AudioRepository<S> for VoicevoxAudioRepository<G, P, C, S>
+impl<G, P, C, I> AudioRepository<I> for VoicevoxAudioRepository<G, P, C, I>
 where
-    G: AudioGenerator<S> + Send + Sync,
-    P: AudioProcessor<S, C> + Send + Sync,
+    G: AudioGenerator<I> + Send + Sync,
+    P: AudioProcessor<I, C> + Send + Sync,
     C: Send,
-    S: Send,
+    I: Send,
 {
-    async fn get(&mut self, audio: Audio) -> Result<S> {
+    async fn get(&mut self, audio: Audio) -> Result<I> {
         if let Some(sound) = self.cache.get(&audio) {
-            let raw = self.audio_processor.raw(&sound);
-            return Ok(raw.into());
+            let raw = self.audio_processor.raw(sound);
+            return Ok(raw);
         }
 
         let raw = self.audio_generator.generate(&audio.speaker, &audio.text, *audio.speed).await?;
