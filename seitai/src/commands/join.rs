@@ -5,15 +5,18 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
+use songbird::input::Input;
 
 use crate::{
-    sound::{Audio, CacheKey},
+    sound::{Audio, AudioRepository, CacheKey},
     speaker::Speaker,
     utils::{get_guild, get_manager, respond},
-    SoundStore,
 };
 
-pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
+pub(crate) async fn run<R>(context: &Context, audio_repository: &R, interaction: &CommandInteraction) -> Result<()>
+where
+    R: AudioRepository<Input> + Send + Sync,
+{
     let guild = match get_guild(context, interaction) {
         Some(guild) => guild,
         None => {
@@ -62,19 +65,13 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
 
     {
         let mut call = call.lock().await;
-        let data = context.data.read().await;
-        let mut sound = data
-            .get::<SoundStore>()
-            .context("failed to get sound store")?
-            .lock()
-            .await;
 
         let audio = Audio {
             text: CacheKey::Connected.as_str().to_string(),
             speaker: "1".to_string(),
             speed: NotNan::new(Speaker::default_speed()).unwrap(),
         };
-        let input = sound
+        let input = audio_repository
             .get(audio)
             .await
             .context("failed to get audio source")?;

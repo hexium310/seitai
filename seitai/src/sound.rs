@@ -1,4 +1,4 @@
-use std::{str::FromStr, hash::Hash, marker::PhantomData};
+use std::{hash::Hash, marker::PhantomData, str::FromStr, sync::{Arc, Mutex}};
 
 use anyhow::Result;
 use hashbrown::HashMap;
@@ -24,13 +24,13 @@ pub(crate) struct Audio {
 pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
     audio_generator: G,
     audio_processor: P,
-    cache: HashMap<Audio, C>,
+    cache: Arc<Mutex<HashMap<Audio, C>>>,
     phantom: PhantomData<fn() -> I>,
 }
 
 #[async_trait]
 pub(crate) trait AudioRepository<S> {
-    async fn get(&mut self, audio: Audio) -> Result<S>;
+    async fn get(&self, audio: Audio) -> Result<S>;
 }
 
 #[async_trait]
@@ -49,7 +49,7 @@ impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
         Self {
             audio_generator,
             audio_processor,
-            cache: HashMap::new(),
+            cache: Default::default(),
             phantom: PhantomData,
         }
     }
@@ -63,8 +63,8 @@ where
     C: Send,
     I: Send,
 {
-    async fn get(&mut self, audio: Audio) -> Result<I> {
-        if let Some(sound) = self.cache.get(&audio) {
+    async fn get(&self, audio: Audio) -> Result<I> {
+        if let Some(sound) = self.cache.lock().unwrap().get(&audio) {
             let raw = self.audio_processor.raw(sound);
             return Ok(raw);
         }
@@ -74,7 +74,7 @@ where
         if CacheKey::from_str(&audio.text).is_ok() {
             let compressed = self.audio_processor.compress(raw).await?;
             let raw = self.audio_processor.raw(&compressed);
-            self.cache.insert(audio, compressed);
+            self.cache.lock().unwrap().insert(audio, compressed);
             return Ok(raw);
         }
 

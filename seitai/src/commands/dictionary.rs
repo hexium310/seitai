@@ -9,6 +9,7 @@ use serenity::{
     futures::{future, stream, StreamExt},
     model::{application::CommandInteraction, Colour},
 };
+use songbird::input::Input;
 use uuid::Uuid;
 use voicevox::dictionary::{
     response::{DeleteUserDictWordResult, GetUserDictResult, PostUserDictWordResult, PutUserDictWordResult},
@@ -18,15 +19,17 @@ use voicevox::dictionary::{
 use crate::{
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
-    sound::{Audio, CacheKey},
+    sound::{Audio, AudioRepository, CacheKey},
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize, respond},
-    SoundStore,
 };
 
 const SYSTEM_SPEAKER: &str = "1";
 
-pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction) -> Result<()> {
+pub(crate) async fn run<'a, R>(context: &Context, audio_repository: &R, interaction: &CommandInteraction) -> Result<()>
+where
+    R: AudioRepository<Input> + Send + Sync,
+{
     let Some(guild_id) = interaction.guild_id else {
         return Ok(());
     };
@@ -96,15 +99,12 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
 
                 let inputs = stream::iter([word, CacheKey::Registered.as_str()])
                     .map(|text| async move {
-                        let data = context.data.read().await;
-                        let mut sound = data.get::<SoundStore>().unwrap().lock().await;
-
                         let audio = Audio {
                             text: text.to_string(),
                             speaker: SYSTEM_SPEAKER.to_string(),
                             speed: NotNan::new(Speaker::default_speed()).unwrap(),
                         };
-                        match sound.get(audio).await {
+                        match audio_repository.get(audio).await {
                             Ok(input) => Some(input),
                             Err(error) => {
                                 tracing::error!("failed to get audio source\nError: {error:?}");

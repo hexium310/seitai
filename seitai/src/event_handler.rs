@@ -10,7 +10,7 @@ use serenity::{
     futures::{future::join_all, StreamExt},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
-use songbird::Call;
+use songbird::{Call, input::Input};
 use sqlx::PgPool;
 use tracing::instrument;
 
@@ -18,16 +18,16 @@ use crate::{
     commands,
     database,
     regex,
-    sound::{Audio, CacheKey},
+    sound::{Audio, AudioRepository, CacheKey},
     speaker::Speaker,
     utils::{get_manager, normalize},
-    SoundStore,
 };
 
 #[derive(Debug)]
-pub struct Handler {
+pub struct Handler<R> {
     pub(crate) database: PgPool,
     pub(crate) speaker: Speaker,
+    pub(crate) audio_repository: R,
 }
 
 enum Replacement {
@@ -37,14 +37,17 @@ enum Replacement {
 const SYSTEM_SPEAKER: &str = "1";
 
 #[async_trait]
-impl EventHandler for Handler {
+impl<R> EventHandler for Handler<R>
+where
+    R: AudioRepository<Input> + Send + Sync,
+{
     async fn interaction_create(&self, context: Context, interaction: Interaction) {
         match interaction {
             Interaction::Command(command) => {
                 let result = match command.data.name.as_str() {
-                    "dictionary" => commands::dictionary::run(&context, &command).await,
+                    "dictionary" => commands::dictionary::run(&context, &self.audio_repository, &command).await,
                     "help" => commands::help::run(&context, &command).await,
-                    "join" => commands::join::run(&context, &command).await,
+                    "join" => commands::join::run(&context, &self.audio_repository, &command).await,
                     "leave" => commands::leave::run(&context, &command).await,
                     "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
                     _ => Ok(()),
@@ -121,13 +124,6 @@ impl EventHandler for Handler {
         };
 
         {
-            let data = context.data.read().await;
-            let Some(sound) = data.get::<SoundStore>() else {
-                tracing::error!("failed to get sound store on message");
-                return;
-            };
-            let mut sound = sound.lock().await;
-
             for text in replace_message(&context, &message).split('\n') {
                 let text = text.trim();
                 if text.is_empty() {
@@ -139,7 +135,7 @@ impl EventHandler for Handler {
                     speaker: speaker.clone(),
                     speed: NotNan::new(speed).unwrap(),
                 };
-                match sound.get(audio).await {
+                match self.audio_repository.get(audio).await {
                     Ok(input) => {
                         call.enqueue_input(input).await;
                     },
@@ -155,7 +151,7 @@ impl EventHandler for Handler {
                     speaker: speaker.clone(),
                     speed: NotNan::new(speed).unwrap(),
                 };
-                match sound.get(audio).await {
+                match self.audio_repository.get(audio).await {
                     Ok(input) => {
                         call.enqueue_input(input).await;
                     },
@@ -230,7 +226,7 @@ impl EventHandler for Handler {
         let is_connected_bot_at = new_state.channel_id == channel_id_bot_at;
 
         if !is_disconnected && newly_connected && is_connected_bot_at {
-            handle_connect(&context, &new_state, &mut call, is_bot_connected).await;
+            handle_connect(&self.audio_repository, &new_state, &mut call, is_bot_connected).await;
             return;
         }
 
@@ -297,7 +293,10 @@ fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> 
         })
 }
 
-async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, is_bot_connected: bool) {
+async fn handle_connect<R>(audio_repository: &R, state: &VoiceState, call: &mut Call, is_bot_connected: bool)
+where
+    R: AudioRepository<Input> + Send + Sync,
+{
     let user_is = (!is_bot_connected)
         .then(|| {
             let member = state.member.as_ref()?;
@@ -310,15 +309,12 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
 
     let inputs = serenity::futures::stream::iter([user_is, connected].into_iter().flatten())
         .map(|text| async move {
-            let data = context.data.read().await;
-            let mut sound = data.get::<SoundStore>().unwrap().lock().await;
-
             let audio = Audio {
                 text,
                 speaker: SYSTEM_SPEAKER.to_string(),
                 speed: NotNan::new(Speaker::default_speed()).unwrap(),
             };
-            match sound.get(audio).await {
+            match audio_repository.get(audio).await {
                 Ok(input) => Some(input),
                 Err(error) => {
                     tracing::error!("failed to get audio source\nError: {error:?}");
