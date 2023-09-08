@@ -3,7 +3,7 @@ use std::{env, process::exit, sync::Arc, time::Duration};
 use anyhow::{Context as _, Error, Result};
 use logging::initialize_logging;
 use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
-use songbird::{input::Input, SerenityInit};
+use songbird::SerenityInit;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
@@ -13,7 +13,7 @@ use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
 use voicevox::Voicevox;
 
-use crate::{audio::{AudioRepository, processor::SongbirdAudioProcessor, VoicevoxAudioRepository}, speaker::Speaker};
+use crate::{audio::{processor::SongbirdAudioProcessor, VoicevoxAudioRepository}, speaker::Speaker};
 
 mod audio;
 mod character_converter;
@@ -23,12 +23,6 @@ mod event_handler;
 mod regex;
 mod speaker;
 mod utils;
-
-struct SoundStore;
-
-impl TypeMapKey for SoundStore {
-    type Value = Arc<Mutex<dyn AudioRepository<Input> + Send>>;
-}
 
 struct VoicevoxClient;
 
@@ -72,11 +66,14 @@ async fn main() {
         },
     };
 
+    let audio_repository = VoicevoxAudioRepository::new(voicevox.audio_generator.clone(), SongbirdAudioProcessor);
+
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
     let mut client = match Client::builder(token, intents)
         .event_handler(event_handler::Handler {
             database: pool,
             speaker,
+            audio_repository,
         })
         .register_songbird()
         .await
@@ -88,12 +85,9 @@ async fn main() {
         },
     };
 
-    let sound = VoicevoxAudioRepository::new(voicevox.audio_generator.clone(), SongbirdAudioProcessor);
-
     {
         let mut data = client.data.write().await;
 
-        data.insert::<SoundStore>(Arc::new(Mutex::new(sound)));
         data.insert::<VoicevoxClient>(Arc::new(Mutex::new(voicevox)));
     }
 

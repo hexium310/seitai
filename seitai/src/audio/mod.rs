@@ -1,4 +1,4 @@
-use std::{str::FromStr, hash::Hash, marker::PhantomData};
+use std::{str::FromStr, hash::Hash, marker::PhantomData, sync::{Arc, Mutex}};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -21,13 +21,13 @@ pub(crate) struct Audio {
 pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
     audio_generator: G,
     audio_processor: P,
-    cache: HashMap<Audio, C>,
+    cache: Arc<Mutex<HashMap<Audio, C>>>,
     phantom: PhantomData<fn() -> I>,
 }
 
 #[async_trait]
 pub(crate) trait AudioRepository<I> {
-    async fn get(&mut self, audio: Audio) -> Result<I>;
+    async fn get(&self, audio: Audio) -> Result<I>;
 }
 
 impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
@@ -35,7 +35,7 @@ impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
         Self {
             audio_generator,
             audio_processor,
-            cache: HashMap::new(),
+            cache: Arc::new(Mutex::new(HashMap::default())),
             phantom: PhantomData,
         }
     }
@@ -46,11 +46,11 @@ impl<G, P, C, I> AudioRepository<I> for VoicevoxAudioRepository<G, P, C, I>
 where
     G: AudioGenerator<I> + Send + Sync,
     P: AudioProcessor<I, C> + Send + Sync,
-    C: Send,
+    C: Send + Sync,
     I: Send,
 {
-    async fn get(&mut self, audio: Audio) -> Result<I> {
-        if let Some(sound) = self.cache.get(&audio) {
+    async fn get(&self, audio: Audio) -> Result<I> {
+        if let Some(sound) = self.cache.lock().expect("audio cache has been poisoned").get(&audio) {
             let raw = self.audio_processor.raw(sound);
             return Ok(raw);
         }
@@ -60,7 +60,7 @@ where
         if CacheTarget::from_str(&audio.text).is_ok() {
             let compressed = self.audio_processor.compress(raw).await?;
             let raw = self.audio_processor.raw(&compressed);
-            self.cache.insert(audio, compressed);
+            self.cache.lock().expect("audio cache has been poisoned").insert(audio, compressed);
             return Ok(raw);
         }
 
