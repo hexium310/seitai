@@ -7,7 +7,7 @@ use serenity::{
 };
 
 use crate::{
-    sound::{Audio, CacheKey},
+    audio::{Audio, CacheKey},
     speaker::Speaker,
     utils::{get_guild, get_manager, respond},
     SoundStore,

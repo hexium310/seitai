@@ -5,6 +5,11 @@ use async_trait::async_trait;
 use hashbrown::HashMap;
 use ordered_float::NotNan;
 
+use self::{generator::AudioGenerator, processor::AudioProcessor};
+
+pub mod generator;
+pub mod processor;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum CacheKey {
     Code,
@@ -21,30 +26,19 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<G, P, C, S> {
+pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
     audio_generator: G,
     audio_processor: P,
     cache: HashMap<Audio, C>,
-    phantom: PhantomData<fn() -> S>,
+    phantom: PhantomData<fn() -> I>,
 }
 
 #[async_trait]
-pub(crate) trait AudioRepository<S> {
-    async fn get(&mut self, audio: Audio) -> Result<S>;
+pub(crate) trait AudioRepository<I> {
+    async fn get(&mut self, audio: Audio) -> Result<I>;
 }
 
-#[async_trait]
-pub(crate) trait AudioGenerator<S> {
-    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<S>;
-}
-
-#[async_trait]
-trait AudioProcessor<R, C> {
-    async fn compress(&self, raw: R) -> Result<C>;
-    fn raw(&self, compressed: &C) -> R;
-}
-
-impl<G, P, C, S> VoicevoxAudioRepository<G, P, C, S> {
+impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
     pub(crate) fn new(audio_generator: G, audio_processor: P) -> Self {
         Self {
             audio_generator,
@@ -56,17 +50,17 @@ impl<G, P, C, S> VoicevoxAudioRepository<G, P, C, S> {
 }
 
 #[async_trait]
-impl<G, P, C, S> AudioRepository<S> for VoicevoxAudioRepository<G, P, C, S>
+impl<G, P, C, I> AudioRepository<I> for VoicevoxAudioRepository<G, P, C, I>
 where
-    G: AudioGenerator<S> + Send + Sync,
-    P: AudioProcessor<S, C> + Send + Sync,
+    G: AudioGenerator<I> + Send + Sync,
+    P: AudioProcessor<I, C> + Send + Sync,
     C: Send,
-    S: Send,
+    I: Send,
 {
-    async fn get(&mut self, audio: Audio) -> Result<S> {
+    async fn get(&mut self, audio: Audio) -> Result<I> {
         if let Some(sound) = self.cache.get(&audio) {
-            let raw = self.audio_processor.raw(&sound);
-            return Ok(raw.into());
+            let raw = self.audio_processor.raw(sound);
+            return Ok(raw);
         }
 
         let raw = self.audio_generator.generate(&audio.speaker, &audio.text, *audio.speed).await?;
@@ -81,40 +75,6 @@ where
         Ok(raw)
     }
 }
-
-// TODO: 別のモジュールに移動する
-const _: () = {
-    use songbird::input::Input;
-
-    #[async_trait]
-    impl AudioGenerator<Input> for voicevox::audio::AudioGenerator {
-        async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Input> {
-            let audio = self.generate(speaker, text, speed).await?;
-            Ok(audio.into())
-        }
-    }
-};
-
-// TODO: 別のモジュールに移動する
-pub(crate) struct SongbirdAudioProcessor;
-
-const _: () = {
-    use songbird::{driver::Bitrate, input::{cached::Compressed, Input}};
-
-    #[async_trait]
-    impl AudioProcessor<Input, Compressed> for SongbirdAudioProcessor {
-        async fn compress(&self, raw: Input) -> Result<Compressed> {
-            let compressed = Compressed::new(raw, Bitrate::BitsPerSecond(128_000)).await?;
-            let _ = compressed.raw.spawn_loader();
-
-            Ok(compressed)
-        }
-
-        fn raw(&self, compressed: &Compressed) -> Input {
-            compressed.new_handle().into()
-        }
-    }
-};
 
 impl FromStr for CacheKey {
     type Err = ();

@@ -18,7 +18,7 @@ use crate::{
     commands,
     database,
     regex,
-    sound::{Audio, CacheKey},
+    audio::{Audio, CacheKey},
     speaker::Speaker,
     utils::{get_manager, normalize},
     SoundStore,
