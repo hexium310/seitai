@@ -18,7 +18,7 @@ use voicevox::dictionary::{
 use crate::{
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
-    audio::{Audio, CacheKey},
+    audio::{Audio, cache::CacheTarget},
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize, respond},
     SoundStore,
@@ -94,7 +94,7 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                     continue;
                 };
 
-                let inputs = stream::iter([word, CacheKey::Registered.as_str()])
+                let inputs = stream::iter([word, CacheTarget::Registered.as_ref()])
                     .map(|text| async move {
                         let data = context.data.read().await;
                         let mut sound = data.get::<SoundStore>().unwrap().lock().await;

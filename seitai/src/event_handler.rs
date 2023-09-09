@@ -18,7 +18,7 @@ use crate::{
     commands,
     database,
     regex,
-    audio::{Audio, CacheKey},
+    audio::{Audio, cache::CacheTarget},
     speaker::Speaker,
     utils::{get_manager, normalize},
     SoundStore,
@@ -151,7 +151,7 @@ impl EventHandler for Handler {
 
             if !message.attachments.is_empty() {
                 let audio = Audio {
-                    text: CacheKey::Attachment.as_str().to_string(),
+                    text: CacheTarget::Attachment.as_ref().to_string(),
                     speaker: speaker.clone(),
                     speed: NotNan::new(speed).unwrap(),
                 };
@@ -306,7 +306,7 @@ async fn handle_connect(context: &Context, state: &VoiceState, call: &mut Call, 
             Some(format!("{name}さんが"))
         })
         .flatten();
-    let connected = Some(CacheKey::Connected.as_str().to_string());
+    let connected = Some(CacheTarget::Connected.as_ref().to_string());
 
     let inputs = serenity::futures::stream::iter([user_is, connected].into_iter().flatten())
         .map(|text| async move {

@@ -7,7 +7,7 @@ use serenity::{
 };
 
 use crate::{
-    audio::{Audio, CacheKey},
+    audio::{Audio, cache::CacheTarget},
     speaker::Speaker,
     utils::{get_guild, get_manager, respond},
     SoundStore,
@@ -70,7 +70,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
             .await;
 
         let audio = Audio {
-            text: CacheKey::Connected.as_str().to_string(),
+            text: CacheTarget::Connected.as_ref().to_string(),
             speaker: "1".to_string(),
             speed: NotNan::new(Speaker::default_speed()).unwrap(),
         };

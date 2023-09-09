@@ -51,6 +51,10 @@ features = ["builtin-queue"]
 version = "0.7.1"
 features = ["postgres", "runtime-tokio", "tls-native-tls"]
 
+[dependencies.strum]
+features = ["derive"]
+version = "0.25.0"
+
 [dependencies.symphonia]
 version = "0.5.2"
 features = ["wav"]
