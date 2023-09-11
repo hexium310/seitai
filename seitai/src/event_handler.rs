@@ -133,7 +133,7 @@ where
                 let audio = Audio {
                     text: text.to_string(),
                     speaker: speaker.clone(),
-                    speed: NotNan::new(speed).unwrap(),
+                    speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
                 };
                 match self.audio_repository.get(audio).await {
                     Ok(input) => {
@@ -149,7 +149,7 @@ where
                 let audio = Audio {
                     text: CacheTarget::Attachment.as_ref().to_string(),
                     speaker: speaker.clone(),
-                    speed: NotNan::new(speed).unwrap(),
+                    speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
                 };
                 match self.audio_repository.get(audio).await {
                     Ok(input) => {
