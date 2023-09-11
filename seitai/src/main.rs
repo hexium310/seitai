@@ -13,7 +13,10 @@ use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
 use voicevox::Voicevox;
 
-use crate::{audio::{processor::SongbirdAudioProcessor, VoicevoxAudioRepository}, speaker::Speaker};
+use crate::{
+    audio::{processor::SongbirdAudioProcessor, VoicevoxAudioRepository},
+    speaker::Speaker,
+};
 
 mod audio;
 mod character_converter;

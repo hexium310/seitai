@@ -10,15 +10,15 @@ use serenity::{
     futures::{future::join_all, StreamExt},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
-use songbird::{Call, input::Input};
+use songbird::{input::Input, Call};
 use sqlx::PgPool;
 use tracing::instrument;
 
 use crate::{
+    audio::{cache::CacheTarget, Audio, AudioRepository},
     commands,
     database,
     regex,
-    audio::{Audio, AudioRepository, cache::CacheTarget},
     speaker::Speaker,
     utils::{get_manager, normalize},
 };

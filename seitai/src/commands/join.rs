@@ -8,7 +8,7 @@ use serenity::{
 use songbird::input::Input;
 
 use crate::{
-    audio::{Audio, AudioRepository, cache::CacheTarget},
+    audio::{cache::CacheTarget, Audio, AudioRepository},
     speaker::Speaker,
     utils::{get_guild, get_manager, respond},
 };

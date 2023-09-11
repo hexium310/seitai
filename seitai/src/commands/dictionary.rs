@@ -17,9 +17,9 @@ use voicevox::dictionary::{
 };
 
 use crate::{
+    audio::{cache::CacheTarget, Audio, AudioRepository},
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
-    audio::{Audio, AudioRepository, cache::CacheTarget},
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize, respond},
 };

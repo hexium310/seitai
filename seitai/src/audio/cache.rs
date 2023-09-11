@@ -1,4 +1,4 @@
-use strum::{EnumString, AsRefStr};
+use strum::{AsRefStr, EnumString};
 
 #[derive(Debug, Clone, EnumString, AsRefStr)]
 pub(crate) enum CacheTarget {

@@ -1,6 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use songbird::{driver::Bitrate, input::{cached::Compressed, Input}};
+use songbird::{
+    driver::Bitrate,
+    input::{cached::Compressed, Input},
+};
 
 pub(crate) struct SongbirdAudioProcessor;
 
