@@ -10,9 +10,10 @@ use crate::utils::{get_guild, get_manager, respond};
 pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
     let guild = get_guild(context, interaction).context("failed to get guild")?;
     let manager = get_manager(context).await?;
-    let has_handler = manager.get(guild.id).is_some();
+    let call = manager.get_or_insert(guild.id);
+    let mut call = call.lock().await;
 
-    if !has_handler {
+    if call.current_connection().is_none() {
         let message = CreateInteractionResponseMessage::new().embed(
             CreateEmbed::new()
                 .description("ボイスチャンネルに接続していません。")
@@ -22,7 +23,7 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
         return Ok(());
     }
 
-    match manager.remove(guild.id).await {
+    match call.leave().await {
         Ok(_) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
