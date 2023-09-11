@@ -2151,7 +2151,7 @@ dependencies = [
 
 [[package]]
 name = "seitai"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "anyhow",
  "hashbrown 0.14.0",
