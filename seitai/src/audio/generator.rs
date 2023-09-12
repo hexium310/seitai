@@ -1,20 +1,20 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use songbird::input::Input;
+use voicevox::Bytes;
 
 #[async_trait]
 pub(crate) trait AudioGenerator {
-    type Input;
+    type Raw;
 
-    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Self::Input>;
+    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Self::Raw>;
 }
 
 #[async_trait]
 impl AudioGenerator for voicevox::audio::AudioGenerator {
-    type Input = Input;
+    type Raw = Bytes;
 
-    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Self::Input> {
+    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Self::Raw> {
         let audio = self.generate(speaker, text, speed).await?;
-        Ok(audio.into())
+        Ok(audio)
     }
 }

@@ -23,22 +23,21 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
+pub(crate) struct VoicevoxAudioRepository<G, P, C, I, B> {
     audio_generator: G,
     audio_processor: P,
     cache: Arc<Mutex<HashMap<Audio, C>>>,
-    phantom: PhantomData<fn() -> I>,
+    phantom: PhantomData<fn() -> (B, I)>,
 }
 
 #[async_trait]
 pub(crate) trait AudioRepository {
     type Input;
-    type Compressed;
 
     async fn get(&self, audio: Audio) -> Result<Self::Input>;
 }
 
-impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I>
+impl<G, P, C, I, B> VoicevoxAudioRepository<G, P, C, I, B>
 where
     G: AudioGenerator + Send + Sync,
     P: AudioProcessor + Send + Sync,
@@ -54,20 +53,20 @@ where
 }
 
 #[async_trait]
-impl<G, P, C, I> AudioRepository for VoicevoxAudioRepository<G, P, C, I>
+impl<G, P, C, I, B> AudioRepository for VoicevoxAudioRepository<G, P, C, I, B>
 where
-    G: AudioGenerator<Input = I> + Send + Sync,
-    P: AudioProcessor<Compressed = C, Raw = I> + Send + Sync,
+    G: AudioGenerator<Raw = B> + Send + Sync,
+    P: AudioProcessor<Compressed = C, Raw = B, Input = I> + Send + Sync,
     I: Send,
     C: Send,
+    B: Into<I> + Send,
 {
     type Input = I;
-    type Compressed = C;
 
     async fn get(&self, audio: Audio) -> Result<Self::Input> {
         if let Some(sound) = self.cache.lock().expect("audio cache has been poisoned").get(&audio) {
-            let raw = self.audio_processor.raw(sound);
-            return Ok(raw);
+            let input = self.audio_processor.to_input(sound);
+            return Ok(input);
         }
 
         let raw = self
@@ -77,14 +76,14 @@ where
 
         if CacheTarget::from_str(&audio.text).is_ok() {
             let compressed = self.audio_processor.compress(raw).await?;
-            let raw = self.audio_processor.raw(&compressed);
+            let input = self.audio_processor.to_input(&compressed);
             self.cache
                 .lock()
                 .expect("audio cache has been poisoned")
                 .insert(audio, compressed);
-            return Ok(raw);
+            return Ok(input);
         }
 
-        Ok(raw)
+        Ok(raw.into())
     }
 }
