@@ -23,11 +23,11 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<G, P, C, I, B> {
-    audio_generator: G,
-    audio_processor: P,
-    cache: Arc<Mutex<HashMap<Audio, C>>>,
-    phantom: PhantomData<fn() -> (B, I)>,
+pub(crate) struct VoicevoxAudioRepository<Compressed, Generator, Input, Processor, Raw> {
+    audio_generator: Generator,
+    audio_processor: Processor,
+    cache: Arc<Mutex<HashMap<Audio, Compressed>>>,
+    phantom: PhantomData<fn() -> (Input, Raw)>,
 }
 
 #[async_trait]
@@ -37,12 +37,12 @@ pub(crate) trait AudioRepository {
     async fn get(&self, audio: Audio) -> Result<Self::Input>;
 }
 
-impl<G, P, C, I, B> VoicevoxAudioRepository<G, P, C, I, B>
+impl<Compressed, Generator, Input, Processor, Raw> VoicevoxAudioRepository<Compressed, Generator, Input, Processor, Raw>
 where
-    G: AudioGenerator + Send + Sync,
-    P: AudioProcessor + Send + Sync,
+    Generator: AudioGenerator + Send + Sync,
+    Processor: AudioProcessor + Send + Sync,
 {
-    pub(crate) fn new(audio_generator: G, audio_processor: P) -> Self {
+    pub(crate) fn new(audio_generator: Generator, audio_processor: Processor) -> Self {
         Self {
             audio_generator,
             audio_processor,
@@ -53,15 +53,16 @@ where
 }
 
 #[async_trait]
-impl<G, P, C, I, B> AudioRepository for VoicevoxAudioRepository<G, P, C, I, B>
+impl<Compressed, Generator, Input, Processor, Raw> AudioRepository
+    for VoicevoxAudioRepository<Compressed, Generator, Input, Processor, Raw>
 where
-    G: AudioGenerator<Raw = B> + Send + Sync,
-    P: AudioProcessor<Compressed = C, Raw = B, Input = I> + Send + Sync,
-    I: Send,
-    C: Send,
-    B: Into<I> + Send,
+    Compressed: Send,
+    Generator: AudioGenerator<Raw = Raw> + Send + Sync,
+    Input: Send,
+    Processor: AudioProcessor<Compressed = Compressed, Input = Input, Raw = Raw> + Send + Sync,
+    Raw: Into<Input> + Send,
 {
-    type Input = I;
+    type Input = Input;
 
     async fn get(&self, audio: Audio) -> Result<Self::Input> {
         if let Some(sound) = self.cache.lock().expect("audio cache has been poisoned").get(&audio) {

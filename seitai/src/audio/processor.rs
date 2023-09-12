@@ -10,9 +10,9 @@ pub(crate) struct SongbirdAudioProcessor;
 
 #[async_trait]
 pub(crate) trait AudioProcessor {
-    type Raw;
     type Compressed;
     type Input;
+    type Raw;
 
     async fn compress(&self, raw: Self::Raw) -> Result<Self::Compressed>;
     fn to_input(&self, compressed: &Self::Compressed) -> Self::Input;
@@ -20,9 +20,9 @@ pub(crate) trait AudioProcessor {
 
 #[async_trait]
 impl AudioProcessor for SongbirdAudioProcessor {
-    type Raw = Bytes;
     type Compressed = Compressed;
     type Input = Input;
+    type Raw = Bytes;
 
     async fn compress(&self, raw: Self::Raw) -> Result<Self::Compressed> {
         let compressed = Compressed::new(raw.into(), Bitrate::BitsPerSecond(128_000)).await?;
