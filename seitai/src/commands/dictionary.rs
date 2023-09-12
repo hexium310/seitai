@@ -28,7 +28,7 @@ const SYSTEM_SPEAKER: &str = "1";
 
 pub(crate) async fn run<'a, R>(context: &Context, audio_repository: &R, interaction: &CommandInteraction) -> Result<()>
 where
-    R: AudioRepository<Input> + Send + Sync,
+    R: AudioRepository<Input = Input> + Send + Sync,
 {
     let Some(guild_id) = interaction.guild_id else {
         return Ok(());

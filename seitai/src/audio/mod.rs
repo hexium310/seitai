@@ -23,7 +23,11 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
+pub(crate) struct VoicevoxAudioRepository<G, P, C, I>
+where
+    G: AudioGenerator + Send + Sync,
+    P: AudioProcessor + Send + Sync,
+{
     audio_generator: G,
     audio_processor: P,
     cache: Arc<Mutex<HashMap<Audio, C>>>,
@@ -31,11 +35,18 @@ pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
 }
 
 #[async_trait]
-pub(crate) trait AudioRepository<I> {
-    async fn get(&self, audio: Audio) -> Result<I>;
+pub(crate) trait AudioRepository {
+    type Input;
+    type Compressed;
+
+    async fn get(&self, audio: Audio) -> Result<Self::Input>;
 }
 
-impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
+impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I>
+where
+    G: AudioGenerator + Send + Sync,
+    P: AudioProcessor + Send + Sync,
+{
     pub(crate) fn new(audio_generator: G, audio_processor: P) -> Self {
         Self {
             audio_generator,
@@ -47,14 +58,17 @@ impl<G, P, C, I> VoicevoxAudioRepository<G, P, C, I> {
 }
 
 #[async_trait]
-impl<G, P, C, I> AudioRepository<I> for VoicevoxAudioRepository<G, P, C, I>
+impl<G, P, C, I> AudioRepository for VoicevoxAudioRepository<G, P, C, I>
 where
-    G: AudioGenerator<I> + Send + Sync,
-    P: AudioProcessor<I, C> + Send + Sync,
-    C: Send + Sync,
+    G: AudioGenerator<Input = I> + Send + Sync,
+    P: AudioProcessor<Compressed = C, Raw = I> + Send + Sync,
     I: Send,
+    C: Send,
 {
-    async fn get(&self, audio: Audio) -> Result<I> {
+    type Input = I;
+    type Compressed = C;
+
+    async fn get(&self, audio: Audio) -> Result<Self::Input> {
         if let Some(sound) = self.cache.lock().expect("audio cache has been poisoned").get(&audio) {
             let raw = self.audio_processor.raw(sound);
             return Ok(raw);

@@ -15,7 +15,7 @@ use crate::{
 
 pub(crate) async fn run<R>(context: &Context, audio_repository: &R, interaction: &CommandInteraction) -> Result<()>
 where
-    R: AudioRepository<Input> + Send + Sync,
+    R: AudioRepository<Input = Input> + Send + Sync,
 {
     let guild = match get_guild(context, interaction) {
         Some(guild) => guild,
