@@ -23,11 +23,7 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<G, P, C, I>
-where
-    G: AudioGenerator + Send + Sync,
-    P: AudioProcessor + Send + Sync,
-{
+pub(crate) struct VoicevoxAudioRepository<G, P, C, I> {
     audio_generator: G,
     audio_processor: P,
     cache: Arc<Mutex<HashMap<Audio, C>>>,

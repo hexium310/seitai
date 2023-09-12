@@ -24,10 +24,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub(crate) struct Handler<R>
-where
-    R: AudioRepository<Input = Input>
-{
+pub(crate) struct Handler<R> {
     pub(crate) database: PgPool,
     pub(crate) speaker: Speaker,
     pub(crate) audio_repository: R,
