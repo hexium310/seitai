@@ -24,10 +24,10 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub(crate) struct Handler<R> {
+pub(crate) struct Handler<Repository> {
     pub(crate) database: PgPool,
     pub(crate) speaker: Speaker,
-    pub(crate) audio_repository: R,
+    pub(crate) audio_repository: Repository,
 }
 
 enum Replacement {
@@ -37,9 +37,9 @@ enum Replacement {
 const SYSTEM_SPEAKER: &str = "1";
 
 #[async_trait]
-impl<R> EventHandler for Handler<R>
+impl<Repository> EventHandler for Handler<Repository>
 where
-    R: AudioRepository<Input = Input> + Send + Sync,
+    Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     async fn interaction_create(&self, context: Context, interaction: Interaction) {
         match interaction {
@@ -293,9 +293,9 @@ fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> 
         })
 }
 
-async fn handle_connect<R>(audio_repository: &R, state: &VoiceState, call: &mut Call, is_bot_connected: bool)
+async fn handle_connect<Repository>(audio_repository: &Repository, state: &VoiceState, call: &mut Call, is_bot_connected: bool)
 where
-    R: AudioRepository<Input = Input> + Send + Sync,
+    Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     let user_is = (!is_bot_connected)
         .then(|| {

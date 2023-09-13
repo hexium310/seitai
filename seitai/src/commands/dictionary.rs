@@ -26,9 +26,9 @@ use crate::{
 
 const SYSTEM_SPEAKER: &str = "1";
 
-pub(crate) async fn run<'a, R>(context: &Context, audio_repository: &R, interaction: &CommandInteraction) -> Result<()>
+pub(crate) async fn run<'a, Repository>(context: &Context, audio_repository: &Repository, interaction: &CommandInteraction) -> Result<()>
 where
-    R: AudioRepository<Input = Input> + Send + Sync,
+    Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     let Some(guild_id) = interaction.guild_id else {
         return Ok(());
