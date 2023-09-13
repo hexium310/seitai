@@ -15,7 +15,7 @@ pub mod cache;
 pub mod generator;
 pub mod processor;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Audio {
     pub(crate) text: String,
     pub(crate) speaker: String,
@@ -89,5 +89,133 @@ where
         }
 
         Ok(raw.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // use mockall::predicate;
+    use ordered_float::NotNan;
+
+    use super::{Audio, AudioRepository, VoicevoxAudioRepository};
+    use crate::audio::{cache::CacheTarget, generator::MockAudioGenerator, processor::MockAudioProcessor};
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub(crate) struct DummyCompressed;
+    #[derive(Debug, PartialEq)]
+    pub(crate) struct DummyInput;
+    #[derive(Debug, PartialEq)]
+    pub(crate) struct DummyRaw;
+
+    impl From<DummyRaw> for DummyInput {
+        fn from(_value: DummyRaw) -> Self {
+            Self
+        }
+    }
+
+    #[tokio::test]
+    async fn get_audio() {
+        let audio = Audio {
+            text: "foo".to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::default(),
+        };
+
+        let mut generator_mock = MockAudioGenerator::new();
+        generator_mock
+            .expect_generate()
+            // .with(predicate::eq(audio.clone().speaker), predicate::eq(audio.clone().text), predicate::eq(*audio.speed))
+            .times(1)
+            .returning(|_, _, _| Ok(DummyRaw));
+
+        let mut processor_mock = MockAudioProcessor::new();
+        processor_mock
+            .expect_compress()
+            .times(0)
+            .returning(|_| Ok(DummyCompressed));
+        processor_mock
+            .expect_to_input()
+            .times(0)
+            .returning(|_| DummyInput);
+
+        let audio_repository =
+            VoicevoxAudioRepository::<CacheTarget, DummyCompressed, _, DummyInput, _, DummyRaw>::new(generator_mock, processor_mock);
+
+        let input = audio_repository.get(audio).await;
+        assert_eq!(input.unwrap(), DummyInput);
+    }
+
+    #[tokio::test]
+    async fn get_and_cache_audio() {
+        let audio = Audio {
+            text: "URL".to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::default(),
+        };
+
+        let mut generator_mock = MockAudioGenerator::new();
+        generator_mock
+            .expect_generate()
+            // .with(predicate::eq(audio.clone().speaker), predicate::eq(audio.clone().text), predicate::eq(*audio.speed))
+            .times(1)
+            .returning(|_, _, _| Ok(DummyRaw));
+
+        let mut processor_mock = MockAudioProcessor::new();
+        processor_mock
+            .expect_compress()
+            .times(1)
+            .returning(|_| Ok(DummyCompressed));
+        processor_mock
+            .expect_to_input()
+            .times(1)
+            .returning(|_| DummyInput);
+
+        let audio_repository =
+            VoicevoxAudioRepository::<CacheTarget, DummyCompressed, _, DummyInput, _, DummyRaw>::new(generator_mock, processor_mock);
+
+        let input = audio_repository.get(audio.clone()).await;
+        assert_eq!(input.unwrap(), DummyInput);
+
+        let cached = {
+            audio_repository.cache.lock().unwrap().get(&audio).cloned()
+        };
+        assert_eq!(cached, Some(DummyCompressed));
+    }
+
+    #[tokio::test]
+    async fn get_cached_audio() {
+        let audio = Audio {
+            text: "URL".to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::default(),
+        };
+
+        let mut generator_mock = MockAudioGenerator::new();
+        generator_mock
+            .expect_generate()
+            // .with(predicate::eq(audio.clone().speaker), predicate::eq(audio.clone().text), predicate::eq(*audio.speed))
+            .times(0)
+            .returning(|_, _, _| Ok(DummyRaw));
+
+        let mut processor_mock = MockAudioProcessor::new();
+        processor_mock
+            .expect_compress()
+            .times(0)
+            .returning(|_| Ok(DummyCompressed));
+        processor_mock
+            .expect_to_input()
+            .times(1)
+            .returning(|_| DummyInput);
+
+        let audio_repository =
+            VoicevoxAudioRepository::<CacheTarget, DummyCompressed, _, DummyInput, _, DummyRaw>::new(generator_mock, processor_mock);
+
+        {
+            let mut cache = audio_repository.cache.lock().unwrap();
+            cache.insert(audio.clone(), DummyCompressed);
+        }
+
+        let input = audio_repository.get(audio).await;
+        assert_eq!(input.unwrap(), DummyInput);
     }
 }
