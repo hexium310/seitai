@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use hashbrown::HashMap;
 use ordered_float::NotNan;
 
-use self::{cache::CacheTarget, generator::AudioGenerator, processor::AudioProcessor};
+use self::{generator::AudioGenerator, processor::AudioProcessor};
 
 pub mod cache;
 pub mod generator;
@@ -23,11 +23,12 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<Compressed, Generator, Input, Processor, Raw> {
+pub(crate) struct VoicevoxAudioRepository<CacheTarget, Compressed, Generator, Input, Processor, Raw> {
     audio_generator: Generator,
     audio_processor: Processor,
     cache: Arc<Mutex<HashMap<Audio, Compressed>>>,
-    phantom: PhantomData<fn() -> (Input, Raw)>,
+    #[allow(clippy::type_complexity)]
+    phantom: PhantomData<fn() -> (CacheTarget, Input, Raw)>,
 }
 
 #[async_trait]
@@ -37,7 +38,8 @@ pub(crate) trait AudioRepository {
     async fn get(&self, audio: Audio) -> Result<Self::Input>;
 }
 
-impl<Compressed, Generator, Input, Processor, Raw> VoicevoxAudioRepository<Compressed, Generator, Input, Processor, Raw>
+impl<CacheTarget, Compressed, Generator, Input, Processor, Raw>
+    VoicevoxAudioRepository<CacheTarget, Compressed, Generator, Input, Processor, Raw>
 where
     Generator: AudioGenerator + Send + Sync,
     Processor: AudioProcessor + Send + Sync,
@@ -53,9 +55,10 @@ where
 }
 
 #[async_trait]
-impl<Compressed, Generator, Input, Processor, Raw> AudioRepository
-    for VoicevoxAudioRepository<Compressed, Generator, Input, Processor, Raw>
+impl<CacheTarget, Compressed, Generator, Input, Processor, Raw> AudioRepository
+    for VoicevoxAudioRepository<CacheTarget, Compressed, Generator, Input, Processor, Raw>
 where
+    CacheTarget: FromStr + Send + Sync,
     Compressed: Send,
     Generator: AudioGenerator<Raw = Raw> + Send + Sync,
     Input: Send,
