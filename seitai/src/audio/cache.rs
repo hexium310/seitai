@@ -30,6 +30,7 @@ impl<Utterance> ConstCacheable<Utterance> {
     }
 }
 
+#[cfg_attr(test, mockall::automock)]
 impl<Utterance> Cacheable for ConstCacheable<Utterance>
 where
     Utterance: FromStr,

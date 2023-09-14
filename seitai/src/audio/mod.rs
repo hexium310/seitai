@@ -94,41 +94,37 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, sync::Mutex};
+    use std::str::FromStr;
 
     use mockall::{mock, predicate};
     use ordered_float::NotNan;
 
     use super::{Audio, AudioRepository, VoicevoxAudioRepository};
-    use crate::audio::{generator::MockAudioGenerator, processor::MockAudioProcessor};
+    use crate::audio::{cache::MockConstCacheable, generator::MockAudioGenerator, processor::MockAudioProcessor};
 
     mock! {
-        CacheTarget {}
-        impl FromStr for CacheTarget {
+        PredefinedUtterance {}
+        impl FromStr for PredefinedUtterance {
             type Err = &'static str;
 
             fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err>;
         }
     }
 
-    static CACHE_TARGET: Mutex<()> = Mutex::new(());
-
     #[tokio::test]
     async fn get_audio() {
-        let _m = CACHE_TARGET.lock().unwrap();
-
         let audio = Audio {
             text: "foo".to_string(),
             speaker: "1".to_string(),
             speed: NotNan::new(1.0).unwrap(),
         };
 
-        let mock_cache_target_from_str = MockCacheTarget::from_str_context();
-        mock_cache_target_from_str
-            .expect()
+        let mut mock_const_cacheable = MockConstCacheable::<MockPredefinedUtterance>::new();
+        mock_const_cacheable
+            .expect_should_cache()
             .times(1)
             .with(predicate::eq("foo"))
-            .returning(|_| Err("no cache"));
+            .returning(|_| false);
 
         let mut mock_audio_generator = MockAudioGenerator::new();
         mock_audio_generator
@@ -139,7 +135,8 @@ mod tests {
 
         let mock_audio_processor = MockAudioProcessor::new();
 
-        let audio_repository = VoicevoxAudioRepository::<MockCacheTarget, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor);
+        let audio_repository =
+            VoicevoxAudioRepository::<_, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor, mock_const_cacheable);
 
         let actual = audio_repository.get(audio).await.unwrap();
         assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
@@ -147,20 +144,18 @@ mod tests {
 
     #[tokio::test]
     async fn get_cached_audio() {
-        let _m = CACHE_TARGET.lock().unwrap();
-
         let audio = Audio {
             text: "bar".to_string(),
             speaker: "1".to_string(),
             speed: NotNan::new(1.0).unwrap(),
         };
 
-        let mock_cache_target_from_str = MockCacheTarget::from_str_context();
-        mock_cache_target_from_str
-            .expect()
+        let mut mock_const_cacheable = MockConstCacheable::<MockPredefinedUtterance>::new();
+        mock_const_cacheable
+            .expect_should_cache()
             .times(1)
             .with(predicate::eq("bar"))
-            .returning(|_| Ok(MockCacheTarget {}));
+            .returning(|_| true);
 
         let mut mock_audio_generator = MockAudioGenerator::new();
         mock_audio_generator
@@ -182,7 +177,9 @@ mod tests {
             .with(predicate::eq(vec![0x04, 0x05]))
             .returning(|_| vec![0x00, 0x01, 0x02, 0x03]);
 
-        let audio_repository = VoicevoxAudioRepository::<MockCacheTarget, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor);
+
+        let audio_repository =
+            VoicevoxAudioRepository::<_, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor, mock_const_cacheable);
 
         let actual = audio_repository.get(audio.clone()).await.unwrap();
         assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
