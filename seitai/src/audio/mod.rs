@@ -94,7 +94,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, sync::{Mutex, OnceLock}};
+    use std::{str::FromStr, sync::Mutex};
 
     use mockall::{mock, predicate};
     use ordered_float::NotNan;
@@ -111,11 +111,11 @@ mod tests {
         }
     }
 
-    static CACHE_TARGET: OnceLock<Mutex<()>> = OnceLock::new();
+    static CACHE_TARGET: Mutex<()> = Mutex::new(());
 
     #[tokio::test]
     async fn get_audio() {
-        let _m = CACHE_TARGET.get_or_init(|| Mutex::new(())).lock().unwrap();
+        let _m = CACHE_TARGET.lock().unwrap();
 
         let audio = Audio {
             text: "foo".to_string(),
@@ -147,7 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_cached_audio() {
-        let _m = CACHE_TARGET.get_or_init(|| Mutex::new(())).lock().unwrap();
+        let _m = CACHE_TARGET.lock().unwrap();
 
         let audio = Audio {
             text: "bar".to_string(),
