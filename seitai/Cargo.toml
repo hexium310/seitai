@@ -23,9 +23,6 @@ features = ["lite"]
 [dependencies.logging]
 workspace = true
 
-[dependencies.mockall]
-version = "0.11.4"
-
 [dependencies.ordered-float]
 version = "3.9.1"
 
@@ -73,3 +70,6 @@ workspace = true
 
 [dependencies.voicevox]
 path = "../crates/voicevox"
+
+[dev-dependencies.mockall]
+version = "0.11.4"

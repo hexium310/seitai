@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use voicevox::Bytes;
 
-#[cfg_attr(test, mockall::automock(type Raw = super::tests::DummyRaw;))]
+#[cfg_attr(test, mockall::automock(type Raw = Vec<u8>;))]
 #[async_trait]
 pub(crate) trait AudioGenerator {
     type Raw;
