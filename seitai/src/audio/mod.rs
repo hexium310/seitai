@@ -96,7 +96,7 @@ where
 mod tests {
     use std::str::FromStr;
 
-    use mockall::{mock, predicate};
+    use mockall::mock;
     use ordered_float::NotNan;
 
     use super::{Audio, AudioRepository, VoicevoxAudioRepository};
@@ -123,14 +123,14 @@ mod tests {
         mock_const_cacheable
             .expect_should_cache()
             .times(1)
-            .with(predicate::eq("foo"))
+            .withf(|x| x == "foo")
             .returning(|_| false);
 
         let mut mock_audio_generator = MockAudioGenerator::new();
         mock_audio_generator
             .expect_generate()
             .times(1)
-            .with(predicate::eq("1"), predicate::eq("foo"), predicate::eq(1.0))
+            .withf(|x, y, z| (x, y, z) == ("1", "foo", &1.0))
             .returning(|_, _, _| Ok(vec![0x00, 0x01, 0x02, 0x03]));
 
         let mock_audio_processor = MockAudioProcessor::new();
@@ -154,29 +154,28 @@ mod tests {
         mock_const_cacheable
             .expect_should_cache()
             .times(1)
-            .with(predicate::eq("bar"))
+            .withf(|x| x == "bar")
             .returning(|_| true);
 
         let mut mock_audio_generator = MockAudioGenerator::new();
         mock_audio_generator
             .expect_generate()
             .times(1)
-            .with(predicate::eq("1"), predicate::eq("bar"), predicate::eq(1.0))
+            .withf(|x, y, z| (x, y, z) == ("1", "bar", &1.0))
             .returning(|_, _, _| Ok(vec![0x00, 0x01, 0x02, 0x03]));
 
         let mut mock_audio_processor = MockAudioProcessor::new();
         mock_audio_processor
             .expect_compress()
             .times(1)
-            .with(predicate::eq(vec![0x00, 0x01, 0x02, 0x03]))
+            .withf(|x| x == &[0x00, 0x01, 0x02, 0x03])
             .returning(|_| Ok(vec![0x04, 0x05]));
 
         mock_audio_processor
             .expect_to_input()
             .times(2)
-            .with(predicate::eq(vec![0x04, 0x05]))
+            .withf(|x| x == &[0x04, 0x05])
             .returning(|_| vec![0x00, 0x01, 0x02, 0x03]);
-
 
         let audio_repository =
             VoicevoxAudioRepository::<_, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor, mock_const_cacheable);
