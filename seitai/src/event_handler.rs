@@ -15,7 +15,7 @@ use sqlx::PgPool;
 use tracing::instrument;
 
 use crate::{
-    audio::{cache::CacheTarget, Audio, AudioRepository},
+    audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     commands,
     database,
     regex,
@@ -147,7 +147,7 @@ where
 
             if !message.attachments.is_empty() {
                 let audio = Audio {
-                    text: CacheTarget::Attachment.as_ref().to_string(),
+                    text: PredefinedUtterance::Attachment.as_ref().to_string(),
                     speaker: speaker.clone(),
                     speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
                 };
@@ -305,7 +305,7 @@ where
             Some(format!("{name}さんが"))
         })
         .flatten();
-    let connected = Some(CacheTarget::Connected.as_ref().to_string());
+    let connected = Some(PredefinedUtterance::Connected.as_ref().to_string());
 
     let inputs = serenity::futures::stream::iter([user_is, connected].into_iter().flatten())
         .map(|text| async move {

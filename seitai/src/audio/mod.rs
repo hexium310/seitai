@@ -1,7 +1,6 @@
 use std::{
     hash::Hash,
     marker::PhantomData,
-    str::FromStr,
     sync::{Arc, Mutex},
 };
 
@@ -10,7 +9,7 @@ use async_trait::async_trait;
 use hashbrown::HashMap;
 use ordered_float::NotNan;
 
-use self::{generator::AudioGenerator, processor::AudioProcessor};
+use self::{cache::Cacheable, generator::AudioGenerator, processor::AudioProcessor};
 
 pub mod cache;
 pub mod generator;
@@ -23,12 +22,12 @@ pub(crate) struct Audio {
     pub(crate) speed: NotNan<f32>,
 }
 
-pub(crate) struct VoicevoxAudioRepository<CacheTarget, Compressed, Generator, Input, Processor, Raw> {
+pub(crate) struct VoicevoxAudioRepository<AudioCacheable, Compressed, Generator, Input, Processor, Raw> {
     audio_generator: Generator,
     audio_processor: Processor,
     cache: Arc<Mutex<HashMap<Audio, Compressed>>>,
-    #[allow(clippy::type_complexity)]
-    phantom: PhantomData<fn() -> (CacheTarget, Input, Raw)>,
+    cacheable: AudioCacheable,
+    phantom: PhantomData<fn() -> (Input, Raw)>,
 }
 
 #[async_trait]
@@ -38,27 +37,28 @@ pub(crate) trait AudioRepository {
     async fn get(&self, audio: Audio) -> Result<Self::Input>;
 }
 
-impl<CacheTarget, Compressed, Generator, Input, Processor, Raw>
-    VoicevoxAudioRepository<CacheTarget, Compressed, Generator, Input, Processor, Raw>
+impl<AudioCacheable, Compressed, Generator, Input, Processor, Raw>
+    VoicevoxAudioRepository<AudioCacheable, Compressed, Generator, Input, Processor, Raw>
 where
     Generator: AudioGenerator + Send + Sync,
     Processor: AudioProcessor + Send + Sync,
 {
-    pub(crate) fn new(audio_generator: Generator, audio_processor: Processor) -> Self {
+    pub(crate) fn new(audio_generator: Generator, audio_processor: Processor, cacheable: AudioCacheable) -> Self {
         Self {
             audio_generator,
             audio_processor,
             cache: Arc::new(Mutex::new(HashMap::default())),
+            cacheable,
             phantom: PhantomData,
         }
     }
 }
 
 #[async_trait]
-impl<CacheTarget, Compressed, Generator, Input, Processor, Raw> AudioRepository
-    for VoicevoxAudioRepository<CacheTarget, Compressed, Generator, Input, Processor, Raw>
+impl<AudioCacheable, Compressed, Generator, Input, Processor, Raw> AudioRepository
+    for VoicevoxAudioRepository<AudioCacheable, Compressed, Generator, Input, Processor, Raw>
 where
-    CacheTarget: FromStr + Send + Sync,
+    AudioCacheable: Cacheable + Send + Sync,
     Compressed: Send,
     Generator: AudioGenerator<Raw = Raw> + Send + Sync,
     Input: Send,
@@ -78,7 +78,7 @@ where
             .generate(&audio.speaker, &audio.text, *audio.speed)
             .await?;
 
-        if CacheTarget::from_str(&audio.text).is_ok() {
+        if self.cacheable.should_cache(&audio.text) {
             let compressed = self.audio_processor.compress(raw).await?;
             let input = self.audio_processor.to_input(&compressed);
             self.cache

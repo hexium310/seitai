@@ -8,7 +8,7 @@ use serenity::{
 use songbird::input::Input;
 
 use crate::{
-    audio::{cache::CacheTarget, Audio, AudioRepository},
+    audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     speaker::Speaker,
     utils::{get_guild, get_manager, respond},
 };
@@ -67,7 +67,7 @@ where
         let mut call = call.lock().await;
 
         let audio = Audio {
-            text: CacheTarget::Connected.as_ref().to_string(),
+            text: PredefinedUtterance::Connected.as_ref().to_string(),
             speaker: "1".to_string(),
             speed: NotNan::new(Speaker::default_speed()).unwrap(),
         };

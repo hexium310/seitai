@@ -17,7 +17,7 @@ use voicevox::dictionary::{
 };
 
 use crate::{
-    audio::{cache::CacheTarget, Audio, AudioRepository},
+    audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
     speaker::Speaker,
@@ -97,7 +97,7 @@ where
                     continue;
                 };
 
-                let inputs = stream::iter([word, CacheTarget::Registered.as_ref()])
+                let inputs = stream::iter([word, PredefinedUtterance::Registered.as_ref()])
                     .map(|text| async move {
                         let audio = Audio {
                             text: text.to_string(),

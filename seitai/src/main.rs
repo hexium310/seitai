@@ -14,7 +14,7 @@ use tracing::log::LevelFilter;
 use voicevox::Voicevox;
 
 use crate::{
-    audio::{cache::CacheTarget, processor::SongbirdAudioProcessor, VoicevoxAudioRepository},
+    audio::{cache::{ConstCacheable, PredefinedUtterance}, processor::SongbirdAudioProcessor, VoicevoxAudioRepository},
     speaker::Speaker,
 };
 
@@ -69,7 +69,8 @@ async fn main() {
         },
     };
 
-    let audio_repository = VoicevoxAudioRepository::<CacheTarget, _, _, _, _, _>::new(voicevox.audio_generator.clone(), SongbirdAudioProcessor);
+    let audio_repository =
+        VoicevoxAudioRepository::new(voicevox.audio_generator.clone(), SongbirdAudioProcessor, ConstCacheable::<PredefinedUtterance>::new());
 
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
     let mut client = match Client::builder(token, intents)
