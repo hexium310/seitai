@@ -8,6 +8,7 @@ use voicevox::Bytes;
 
 pub(crate) struct SongbirdAudioProcessor;
 
+#[cfg_attr(test, mockall::automock(type Compressed = Vec<u8>; type Input = Vec<u8>; type Raw = Vec<u8>;))]
 #[async_trait]
 pub(crate) trait AudioProcessor {
     type Compressed;

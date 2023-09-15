@@ -15,7 +15,7 @@ pub mod cache;
 pub mod generator;
 pub mod processor;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Audio {
     pub(crate) text: String,
     pub(crate) speaker: String,
@@ -89,5 +89,87 @@ where
         }
 
         Ok(raw.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ordered_float::NotNan;
+
+    use super::{Audio, AudioRepository, VoicevoxAudioRepository};
+    use crate::audio::{cache::MockCacheable, generator::MockAudioGenerator, processor::MockAudioProcessor};
+
+    #[tokio::test]
+    async fn get_audio() {
+        let audio = Audio {
+            text: "foo".to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::new(1.0).unwrap(),
+        };
+
+        let mut mock_cacheable = MockCacheable::new();
+        mock_cacheable
+            .expect_should_cache()
+            .times(1)
+            .withf(|x| x == "foo")
+            .returning(|_| false);
+
+        let mut mock_audio_generator = MockAudioGenerator::new();
+        mock_audio_generator
+            .expect_generate()
+            .times(1)
+            .withf(|x, y, z| (x, y, z) == ("1", "foo", &1.0))
+            .returning(|_, _, _| Ok(vec![0x00, 0x01, 0x02, 0x03]));
+
+        let mock_audio_processor = MockAudioProcessor::new();
+
+        let audio_repository = VoicevoxAudioRepository::new(mock_audio_generator, mock_audio_processor, mock_cacheable);
+
+        let actual = audio_repository.get(audio).await.unwrap();
+        assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
+    }
+
+    #[tokio::test]
+    async fn get_cached_audio() {
+        let audio = Audio {
+            text: "bar".to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::new(1.0).unwrap(),
+        };
+
+        let mut mock_cacheable = MockCacheable::new();
+        mock_cacheable
+            .expect_should_cache()
+            .times(1)
+            .withf(|x| x == "bar")
+            .returning(|_| true);
+
+        let mut mock_audio_generator = MockAudioGenerator::new();
+        mock_audio_generator
+            .expect_generate()
+            .times(1)
+            .withf(|x, y, z| (x, y, z) == ("1", "bar", &1.0))
+            .returning(|_, _, _| Ok(vec![0x00, 0x01, 0x02, 0x03]));
+
+        let mut mock_audio_processor = MockAudioProcessor::new();
+        mock_audio_processor
+            .expect_compress()
+            .times(1)
+            .withf(|x| x == &[0x00, 0x01, 0x02, 0x03])
+            .returning(|_| Ok(vec![0x04, 0x05]));
+
+        mock_audio_processor
+            .expect_to_input()
+            .times(2)
+            .withf(|x| x == &[0x04, 0x05])
+            .returning(|_| vec![0x00, 0x01, 0x02, 0x03]);
+
+        let audio_repository = VoicevoxAudioRepository::new(mock_audio_generator, mock_audio_processor, mock_cacheable);
+
+        let actual = audio_repository.get(audio.clone()).await.unwrap();
+        assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
+
+        let actual = audio_repository.get(audio).await.unwrap();
+        assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
     }
 }

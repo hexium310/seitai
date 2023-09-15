@@ -20,6 +20,7 @@ pub(crate) struct ConstCacheable<Utterance> {
     _marker: PhantomData<fn() -> Utterance>,
 }
 
+#[cfg_attr(test, mockall::automock)]
 pub(crate) trait Cacheable {
     fn should_cache(&self, text: &str) -> bool;
 }
