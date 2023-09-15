@@ -94,22 +94,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use mockall::mock;
     use ordered_float::NotNan;
 
     use super::{Audio, AudioRepository, VoicevoxAudioRepository};
-    use crate::audio::{cache::MockConstCacheable, generator::MockAudioGenerator, processor::MockAudioProcessor};
-
-    mock! {
-        PredefinedUtterance {}
-        impl FromStr for PredefinedUtterance {
-            type Err = &'static str;
-
-            fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err>;
-        }
-    }
+    use crate::audio::{cache::MockCacheable, generator::MockAudioGenerator, processor::MockAudioProcessor};
 
     #[tokio::test]
     async fn get_audio() {
@@ -119,8 +107,8 @@ mod tests {
             speed: NotNan::new(1.0).unwrap(),
         };
 
-        let mut mock_const_cacheable = MockConstCacheable::<MockPredefinedUtterance>::new();
-        mock_const_cacheable
+        let mut mock_cacheable = MockCacheable::new();
+        mock_cacheable
             .expect_should_cache()
             .times(1)
             .withf(|x| x == "foo")
@@ -135,8 +123,7 @@ mod tests {
 
         let mock_audio_processor = MockAudioProcessor::new();
 
-        let audio_repository =
-            VoicevoxAudioRepository::<_, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor, mock_const_cacheable);
+        let audio_repository = VoicevoxAudioRepository::new(mock_audio_generator, mock_audio_processor, mock_cacheable);
 
         let actual = audio_repository.get(audio).await.unwrap();
         assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
@@ -150,8 +137,8 @@ mod tests {
             speed: NotNan::new(1.0).unwrap(),
         };
 
-        let mut mock_const_cacheable = MockConstCacheable::<MockPredefinedUtterance>::new();
-        mock_const_cacheable
+        let mut mock_cacheable = MockCacheable::new();
+        mock_cacheable
             .expect_should_cache()
             .times(1)
             .withf(|x| x == "bar")
@@ -177,8 +164,7 @@ mod tests {
             .withf(|x| x == &[0x04, 0x05])
             .returning(|_| vec![0x00, 0x01, 0x02, 0x03]);
 
-        let audio_repository =
-            VoicevoxAudioRepository::<_, Vec<u8>, _, Vec<u8>, _, Vec<u8>>::new(mock_audio_generator, mock_audio_processor, mock_const_cacheable);
+        let audio_repository = VoicevoxAudioRepository::new(mock_audio_generator, mock_audio_processor, mock_cacheable);
 
         let actual = audio_repository.get(audio.clone()).await.unwrap();
         assert_eq!(actual, vec![0x00, 0x01, 0x02, 0x03]);
