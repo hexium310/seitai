@@ -24,7 +24,7 @@ jobs:
           echo TARGETS=${ref_name%/*} >> $GITHUB_ENV
           echo VERSION=${ref_name#*/} >> $GITHUB_ENV
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: hexium310
