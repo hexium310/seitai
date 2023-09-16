@@ -16,9 +16,12 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - name: Build apps
+      - name: Check apps errors
         run: |
-          cargo build --workspace
+          cargo check --workspace
+      - name: Test
+        run: |
+          cargo test --workspace
       - name: Run clippy
         uses: giraffate/clippy-action@v1
         with:
