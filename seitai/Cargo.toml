@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies.anyhow]
 workspace = true
 
+[dependencies.async-trait]
+version = "0.1.73"
+
 [dependencies.hashbrown]
 version = "0.14.0"
 
@@ -19,6 +22,9 @@ features = ["lite"]
 
 [dependencies.logging]
 workspace = true
+
+[dependencies.ordered-float]
+version = "3.9.1"
 
 [dependencies.regex-lite]
 version = "0.1.0"
@@ -45,6 +51,10 @@ features = ["builtin-queue"]
 version = "0.7.1"
 features = ["postgres", "runtime-tokio", "tls-native-tls"]
 
+[dependencies.strum]
+features = ["derive"]
+version = "0.25.0"
+
 [dependencies.symphonia]
 version = "0.5.2"
 features = ["wav"]
@@ -60,3 +70,6 @@ workspace = true
 
 [dependencies.voicevox]
 path = "../crates/voicevox"
+
+[dev-dependencies.mockall]
+version = "0.11.4"

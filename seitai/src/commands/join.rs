@@ -1,13 +1,22 @@
 use anyhow::{Context as _, Result};
+use ordered_float::NotNan;
 use serenity::{
     builder::{CreateCommand, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
+use songbird::input::Input;
 
-use crate::utils::{get_cached_audio, get_guild, get_manager, respond};
+use crate::{
+    audio::{cache::PredefinedUtterance, Audio, AudioRepository},
+    speaker::Speaker,
+    utils::{get_guild, get_manager, respond},
+};
 
-pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> Result<()> {
+pub(crate) async fn run<Repository>(context: &Context, audio_repository: &Repository, interaction: &CommandInteraction) -> Result<()>
+where
+    Repository: AudioRepository<Input = Input> + Send + Sync,
+{
     let guild = match get_guild(context, interaction) {
         Some(guild) => guild,
         None => {
@@ -47,20 +56,27 @@ pub(crate) async fn run(context: &Context, interaction: &CommandInteraction) -> 
     };
     join.await?;
 
-    {
-        let mut call = call.lock().await;
-        let audio = get_cached_audio(context, "connected")
-            .await
-            .context("failed to get cached audio \"connected\"")?;
-        call.enqueue_input(audio).await;
-    }
-
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()
             .description("ボイスチャンネルに接続しました。")
             .colour(Colour::FOOYOO),
     );
     respond(context, interaction, &message).await?;
+
+    {
+        let mut call = call.lock().await;
+
+        let audio = Audio {
+            text: PredefinedUtterance::Connected.as_ref().to_string(),
+            speaker: "1".to_string(),
+            speed: NotNan::new(Speaker::default_speed()).unwrap(),
+        };
+        let input = audio_repository
+            .get(audio)
+            .await
+            .context("failed to get audio source")?;
+        call.enqueue_input(input).await;
+    }
     Ok(())
 }
 

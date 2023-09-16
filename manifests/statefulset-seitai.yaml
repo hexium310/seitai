@@ -12,22 +12,6 @@ spec:
       labels:
         app: seitai
     spec:
-      initContainers:
-        - name: resources
-          image: alpine/k8s:1.27.4
-          command:
-            - sh
-            - -c
-          args:
-            - |
-              curl --silent https://raw.githubusercontent.com/hexium310/seitai/master/init_resource.sh | sh
-          env:
-            - name: VOICEVOX_HOST
-              value: voicevox
-          volumeMounts:
-            - mountPath: /apps/resources/
-              name: seitai-resources
-              subPath: ./resources/
       containers:
         - name: seitai
           image: ghcr.io/hexium310/seitai
@@ -51,10 +35,6 @@ spec:
                 secretKeyRef:
                   name: seitai.seitai-database.credentials.postgresql.acid.zalan.do
                   key: password
-          volumeMounts:
-            - mountPath: /resources/
-              name: seitai-resources
-              subPath: ./resources/
         - name: restarter
           image: ghcr.io/hexium310/restarter
           imagePullPolicy: Always
@@ -65,15 +45,3 @@ spec:
                   name: seitai-secret
                   key: token
       serviceAccountName: restarter
-  volumeClaimTemplates:
-    - apiVersion: v1
-      kind: PersistentVolumeClaim
-      metadata:
-        name: seitai-resources
-      spec:
-        accessModes:
-          - ReadWriteMany
-        resources:
-          requests:
-            storage: 2Mi
-        storageClassName: managed-nfs-storage

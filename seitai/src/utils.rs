@@ -1,7 +1,6 @@
 use std::{borrow::Cow, sync::Arc};
 
 use anyhow::{Context as _, Result};
-use hashbrown::HashMap;
 use serenity::{
     all::{GuildId, User},
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
@@ -10,13 +9,10 @@ use serenity::{
     model::{application::CommandInteraction, guild::Guild},
     utils::{content_safe, ContentSafeOptions},
 };
-use songbird::{
-    input::{cached::Compressed, Input},
-    Songbird,
-};
+use songbird::Songbird;
 use voicevox::Voicevox;
 
-use crate::{regex, SoundStore, VoicevoxClient};
+use crate::{regex, VoicevoxClient};
 
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)
@@ -41,17 +37,6 @@ pub(crate) async fn respond(
         .with_context(|| format!("failed to create interaction response with message: {message:?}"))?;
 
     Ok(())
-}
-
-pub(crate) async fn get_sound_store(context: &Context) -> Option<Arc<Mutex<HashMap<String, Compressed>>>> {
-    let data = context.data.read().await;
-    data.get::<SoundStore>().cloned()
-}
-
-pub(crate) async fn get_cached_audio(context: &Context, key: &str) -> Option<Input> {
-    let sound_store = get_sound_store(context).await?;
-    let sound_store = sound_store.lock().await;
-    sound_store.get(key).map(|source| source.new_handle().into())
 }
 
 pub(crate) fn normalize<'a>(context: &Context, guild_id: &GuildId, users: &[User], text: &'a str) -> Cow<'a, str> {

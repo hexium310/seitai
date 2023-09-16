@@ -1,10 +1,12 @@
 use anyhow::{bail, Context as _, Result};
 use hashbrown::HashMap;
 use indexmap::IndexMap;
+use ordered_float::NotNan;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
     builder::{CreateCommand, CreateCommandOption, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
+    futures::{future, stream, StreamExt},
     model::{application::CommandInteraction, Colour},
 };
 use songbird::input::Input;
@@ -15,15 +17,19 @@ use voicevox::dictionary::{
 };
 
 use crate::{
+    audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     character_converter::{to_full_width, to_half_width, to_katakana},
     regex,
     speaker::Speaker,
-    utils::{get_voicevox, normalize, respond, get_manager, get_cached_audio},
+    utils::{get_manager, get_voicevox, normalize, respond},
 };
 
 const SYSTEM_SPEAKER: &str = "1";
 
-pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction) -> Result<()> {
+pub(crate) async fn run<'a, Repository>(context: &Context, audio_repository: &Repository, interaction: &CommandInteraction) -> Result<()>
+where
+    Repository: AudioRepository<Input = Input> + Send + Sync,
+{
     let Some(guild_id) = interaction.guild_id else {
         return Ok(());
     };
@@ -91,28 +97,26 @@ pub(crate) async fn run<'a>(context: &Context, interaction: &CommandInteraction)
                     continue;
                 };
 
-                let word_with_new_pronunciation = async {
-                    let audio_generator = {
-                        let Some(voicevox) = get_voicevox(context).await else {
-                            tracing::error!("failed to get voicevox client to handle connect");
-                            return None;
+                let inputs = stream::iter([word, PredefinedUtterance::Registered.as_ref()])
+                    .map(|text| async move {
+                        let audio = Audio {
+                            text: text.to_string(),
+                            speaker: SYSTEM_SPEAKER.to_string(),
+                            speed: NotNan::new(Speaker::default_speed()).unwrap(),
                         };
-                        let voicevox = voicevox.lock().await;
-                        voicevox.audio_generator.clone()
-                    };
-                    let audio = match audio_generator.generate(SYSTEM_SPEAKER, word, Speaker::default_speed()).await {
-                        Ok(audio) => audio,
-                        Err(error) => {
-                            tracing::error!("failed to generate audio\nError: {error:?}");
-                            return None;
-                        },
-                    };
-                    Some(Input::from(audio))
-                };
+                        match audio_repository.get(audio).await {
+                            Ok(input) => Some(input),
+                            Err(error) => {
+                                tracing::error!("failed to get audio source\nError: {error:?}");
+                                None
+                            },
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .await;
 
-                let (word_with_new_pronunciation, registered) = tokio::join!(word_with_new_pronunciation, get_cached_audio(context, "registered"));
-                for audio in [word_with_new_pronunciation, registered].into_iter().flatten() {
-                    call.enqueue_input(audio).await;
+                for input in future::join_all(inputs).await.into_iter().flatten() {
+                    call.enqueue_input(input).await;
                 }
             },
             // TODO: Paginate
