@@ -48,7 +48,7 @@ branch = "next"
 features = ["builtin-queue"]
 
 [dependencies.sqlx]
-version = "0.7.1"
+version = "0.7.2"
 features = ["postgres", "runtime-tokio", "tls-native-tls"]
 
 [dependencies.strum]
