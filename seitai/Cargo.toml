@@ -24,7 +24,7 @@ features = ["lite"]
 workspace = true
 
 [dependencies.ordered-float]
-version = "4.1.0"
+version = "4.1.1"
 
 [dependencies.regex-lite]
 version = "0.1.0"
