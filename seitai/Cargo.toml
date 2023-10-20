@@ -7,7 +7,7 @@ edition = "2021"
 workspace = true
 
 [dependencies.async-trait]
-version = "0.1.73"
+version = "0.1.74"
 
 [dependencies.hashbrown]
 version = "0.14.1"
