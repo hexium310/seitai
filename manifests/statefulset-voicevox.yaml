@@ -20,6 +20,8 @@ spec:
           resources:
             limits:
               k8s.chitoku.jp/voicevox: "1"
+            requests:
+              memory: 1.25Gi
           volumeMounts:
             - mountPath: /home/user/.local/share/voicevox-engine-dev/
               name: voicevox-dictionary
