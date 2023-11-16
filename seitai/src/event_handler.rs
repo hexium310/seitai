@@ -97,9 +97,10 @@ where
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        let Some(current_connection) = call.current_connection() else {
+        let (Some(_), Some(channel_id_bot_at)) = (call.current_connection(), call.current_channel()) else {
             return;
         };
+        let channel_id_bot_at = SerenityChannelId::from(channel_id_bot_at.0);
 
         let is_voice_channel_bot_at = {
             let connections = self.connections.lock().await;
@@ -107,12 +108,32 @@ where
                 .get(&guild_id)
                 .is_some_and(|channel_id| &message.channel_id == channel_id)
         };
-        let is_text_channel_binded_to_bot =  current_connection
-            .channel_id
-            .map(|channel_id| SerenityChannelId::from(channel_id.0))
-            .is_some_and(|channel_id| message.channel_id == channel_id);
+        let is_text_channel_binded_to_bot =  message.channel_id == channel_id_bot_at;
 
         if !is_voice_channel_bot_at && !is_text_channel_binded_to_bot {
+            return;
+        }
+
+        let channel_bot_at = match channel_id_bot_at.to_channel(&context.http).await {
+            Ok(channel_bot_at) => channel_bot_at,
+            Err(error) => {
+                tracing::error!("failed to get channel: {channel_id_bot_at:?}\nError: {error:?}");
+                return;
+            },
+        };
+
+        let serenity::all::Channel::Guild(channel_bot_at) = channel_bot_at else {
+            return;
+        };
+
+        let members = match channel_bot_at.members(&context.cache) {
+            Ok(members) => members,
+            Err(error) => {
+                tracing::error!("failed to get members in channel: {channel_bot_at:?}\nError: {error:?}");
+                return;
+            },
+        };
+        if !members.into_iter().map(|member| member.user).any(|user| message.author == user) {
             return;
         }
 
