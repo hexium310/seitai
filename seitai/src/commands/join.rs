@@ -1,6 +1,8 @@
 use anyhow::{Context as _, Result};
+use hashbrown::HashMap;
 use ordered_float::NotNan;
 use serenity::{
+    all::{ChannelId, GuildId},
     builder::{CreateCommand, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
     model::{application::CommandInteraction, Colour},
@@ -13,7 +15,12 @@ use crate::{
     utils::{get_guild, get_manager, respond},
 };
 
-pub(crate) async fn run<Repository>(context: &Context, audio_repository: &Repository, interaction: &CommandInteraction) -> Result<()>
+pub(crate) async fn run<Repository>(
+    context: &Context,
+    audio_repository: &Repository,
+    connections: &mut HashMap<GuildId, ChannelId>,
+    interaction: &CommandInteraction,
+) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
@@ -55,6 +62,8 @@ where
         call.join(connect_to).await?
     };
     join.await?;
+
+    connections.insert(guild.id, interaction.channel_id);
 
     let message = CreateInteractionResponseMessage::new().embed(
         CreateEmbed::new()

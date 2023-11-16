@@ -1,13 +1,14 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use anyhow::Context as _;
+use hashbrown::HashMap;
 use lazy_regex::Regex;
 use ordered_float::NotNan;
 use serenity::{
-    all::{ChannelId as SerenityChannelId, ChannelType, VoiceState},
+    all::{ChannelId as SerenityChannelId, ChannelType, GuildId, VoiceState},
     async_trait,
     client::{Context, EventHandler},
-    futures::{future::join_all, StreamExt},
+    futures::{future::join_all, lock::Mutex, StreamExt},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
@@ -28,6 +29,7 @@ pub(crate) struct Handler<Repository> {
     pub(crate) database: PgPool,
     pub(crate) speaker: Speaker,
     pub(crate) audio_repository: Repository,
+    pub(crate) connections: Arc<Mutex<HashMap<GuildId, SerenityChannelId>>>,
 }
 
 enum Replacement {
@@ -47,7 +49,10 @@ where
                 let result = match command.data.name.as_str() {
                     "dictionary" => commands::dictionary::run(&context, &self.audio_repository, &command).await,
                     "help" => commands::help::run(&context, &command).await,
-                    "join" => commands::join::run(&context, &self.audio_repository, &command).await,
+                    "join" => {
+                        let mut connections = self.connections.lock().await;
+                        commands::join::run(&context, &self.audio_repository, &mut connections, &command).await
+                    },
                     "leave" => commands::leave::run(&context, &command).await,
                     "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
                     _ => Ok(()),
@@ -92,9 +97,24 @@ where
         let call = manager.get_or_insert(guild_id);
         let mut call = call.lock().await;
 
-        if call.current_connection().is_none() {
+        let Some(current_connection) = call.current_connection() else {
             return;
         };
+
+        let is_voice_channel_bot_at = {
+            let connections = self.connections.lock().await;
+            connections
+                .get(&guild_id)
+                .is_some_and(|channel_id| &message.channel_id == channel_id)
+        };
+        let is_text_channel_binded_to_bot =  current_connection
+            .channel_id
+            .map(|channel_id| SerenityChannelId::from(channel_id.0))
+            .is_some_and(|channel_id| message.channel_id == channel_id);
+
+        if !is_voice_channel_bot_at && !is_text_channel_binded_to_bot {
+            return;
+        }
 
         let ids: Vec<i64> = vec![message.author.id.into()];
         let speaker = match database::user::fetch_by_ids(&self.database, &ids).await {
@@ -210,15 +230,21 @@ where
                 return;
             },
         };
-        let is_bot_connected = new_state.user_id == bot_id;
-        if is_bot_connected {
+
+        let is_bot = new_state.user_id == bot_id;
+        let is_disconnected = new_state.channel_id.is_none();
+
+        if is_bot {
+            if is_disconnected {
+                let mut connections = self.connections.lock().await;
+                connections.remove(&guild_id);
+            }
             return;
         }
 
         let channel_id_bot_at = call
             .current_channel()
             .map(|channel_id| SerenityChannelId::from(channel_id.0));
-        let is_disconnected = new_state.channel_id.is_none();
         let newly_connected = match &old_state {
             Some(old_state) => old_state.channel_id != new_state.channel_id,
             None => true,
@@ -226,7 +252,8 @@ where
         let is_connected_bot_at = new_state.channel_id == channel_id_bot_at;
 
         if !is_disconnected && newly_connected && is_connected_bot_at {
-            handle_connect(&self.audio_repository, &new_state, &mut call, is_bot_connected).await;
+            let mut connections = self.connections.lock().await;
+            handle_connect(&self.audio_repository, &new_state, &mut call, is_bot, &mut connections).await;
             return;
         }
 
@@ -293,11 +320,23 @@ fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> 
         })
 }
 
-async fn handle_connect<Repository>(audio_repository: &Repository, state: &VoiceState, call: &mut Call, is_bot_connected: bool)
-where
+async fn handle_connect<Repository>(
+    audio_repository: &Repository,
+    state: &VoiceState,
+    call: &mut Call,
+    is_bot: bool,
+    connections: &mut HashMap<GuildId, SerenityChannelId>,
+) where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
-    let user_is = (!is_bot_connected)
+    if is_bot {
+        let (Some(guild_id), Some(channel_id)) = (state.guild_id, state.channel_id) else {
+            return;
+        };
+        connections.insert(guild_id, channel_id);
+    }
+
+    let user_is = (!is_bot)
         .then(|| {
             let member = state.member.as_ref()?;
             let user = &member.user;

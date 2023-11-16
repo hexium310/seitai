@@ -1,6 +1,7 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Error, Result};
+use hashbrown::HashMap;
 use logging::initialize_logging;
 use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::SerenityInit;
@@ -78,6 +79,7 @@ async fn main() {
             database: pool,
             speaker,
             audio_repository,
+            connections: Arc::new(Mutex::new(HashMap::new())),
         })
         .register_songbird()
         .await
