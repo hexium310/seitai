@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TAG_CREATION_GITHUB_TOKEN }}
       - name: Create and push tag
         run: |
           ref=${{ github.event.pull_request.head.ref }}
