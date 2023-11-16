@@ -19,6 +19,7 @@ updates:
         patterns:
           - kube
           - k8s-openapi
+    open-pull-requests-limit: 50
   - directory: /
     package-ecosystem: docker
     schedule:
