@@ -10,7 +10,7 @@ workspace = true
 version = "0.1.74"
 
 [dependencies.hashbrown]
-version = "0.14.2"
+version = "0.14.3"
 
 [dependencies.indexmap]
 version = "2.1.0"
