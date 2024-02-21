@@ -60,7 +60,7 @@ where
         match option.name.as_str() {
             "add" => {
                 subcommand_options.entry_ref("accent_type").or_insert("0".to_string());
-                subcommand_options.entry_ref("priority").or_insert("8".to_string());
+                subcommand_options.entry_ref("priority").or_insert("10".to_string());
                 subcommand_options
                     .entry_ref("pronunciation")
                     .and_replace_entry_with(|_key, pronunciation| Some(to_katakana(&*pronunciation).into_owned()));
