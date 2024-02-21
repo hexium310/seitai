@@ -60,7 +60,7 @@ where
         match option.name.as_str() {
             "add" => {
                 subcommand_options.entry_ref("accent_type").or_insert("0".to_string());
-                subcommand_options.entry_ref("priority").or_insert("8".to_string());
+                subcommand_options.entry_ref("priority").or_insert("10".to_string());
                 subcommand_options
                     .entry_ref("pronunciation")
                     .and_replace_entry_with(|_key, pronunciation| Some(to_katakana(&*pronunciation).into_owned()));
@@ -200,9 +200,9 @@ pub fn register() -> CreateCommand {
             .add_string_choice_localized("VERB", "VERB", [("ja", "動詞")])
             .add_string_choice_localized("ADJECTIVE", "ADJECTIVE", [("ja", "形容詞")])
             .add_string_choice_localized("SUFFIX", "SUFFIX", [("ja", "接尾辞")]);
-        let priority = CreateCommandOption::new(CommandOptionType::Integer, "priority", "The higher number, the higher priority of word (0 - 10. default: 8)")
+        let priority = CreateCommandOption::new(CommandOptionType::Integer, "priority", "The higher number, the higher priority of word (0 - 10. default: 10)")
             .name_localized("ja", "優先度")
-            .description_localized("ja", "数字が大きいほど優先度が高くなる（0 〜 10。デフォルトは 8）")
+            .description_localized("ja", "数字が大きいほど優先度が高くなる（0 〜 10。デフォルトは 10）")
             .min_int_value(0)
             .max_int_value(10);
         CreateCommandOption::new(CommandOptionType::SubCommand, "add", "Registers word into dictionary")
