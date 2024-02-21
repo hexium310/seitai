@@ -8,7 +8,7 @@ services:
 
   voicevox:
     environment:
-      VIRTUAL_HOST: voicevox.seitai.localhost
+      VIRTUAL_HOST: ${VOICEVOX_HOST}
       VIRTUAL_PORT: 50021
     ports:
       - 50021:50021
@@ -66,14 +66,14 @@ services:
         target: /usr/src/myapp/restarter
     command: /bin/sh -c 'cargo run -p restarter'
     environment:
-      - DISCORD_TOKEN
+      DISCORD_TOKEN:
   database:
     image: postgres:15.4
     environment:
       POSTGRES_DB: seitai
       POSTGRES_USER: seitai
       POSTGRES_PASSWORD: seitai
-      VIRTUAL_HOST: database.seitai.localhost
+      VIRTUAL_HOST: ${PGHOST}
       VIRTUAL_PORT: 5432
     ports:
       - '5432:5432'

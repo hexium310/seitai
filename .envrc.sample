@@ -1,0 +1,7 @@
+export RUST_LOG=info,seitai=debug,sqlx=debug
+export DISCORD_TOKEN=
+export VOICEVOX_HOST=voicevox.seitai.localhost
+export PGHOST=database.seitai.localhost
+export PGDATABASE=seitai
+export PGUSER=seitai
+export PGPASSWORD=seitai
