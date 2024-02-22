@@ -1,11 +1,11 @@
 use std::{
+    future::Future,
     hash::Hash,
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
 use anyhow::Result;
-use async_trait::async_trait;
 use hashbrown::HashMap;
 use ordered_float::NotNan;
 
@@ -30,11 +30,10 @@ pub(crate) struct VoicevoxAudioRepository<AudioCacheable, Compressed, Generator,
     phantom: PhantomData<fn() -> (Input, Raw)>,
 }
 
-#[async_trait]
 pub(crate) trait AudioRepository {
     type Input;
 
-    async fn get(&self, audio: Audio) -> Result<Self::Input>;
+    fn get(&self, audio: Audio) -> impl Future<Output = Result<Self::Input>> + Send;
 }
 
 impl<AudioCacheable, Compressed, Generator, Input, Processor, Raw>
@@ -54,7 +53,6 @@ where
     }
 }
 
-#[async_trait]
 impl<AudioCacheable, Compressed, Generator, Input, Processor, Raw> AudioRepository
     for VoicevoxAudioRepository<AudioCacheable, Compressed, Generator, Input, Processor, Raw>
 where
@@ -95,6 +93,7 @@ where
 #[cfg(test)]
 mod tests {
     use ordered_float::NotNan;
+    use futures::future::ok;
 
     use super::{Audio, AudioRepository, VoicevoxAudioRepository};
     use crate::audio::{cache::MockCacheable, generator::MockAudioGenerator, processor::MockAudioProcessor};
@@ -119,7 +118,7 @@ mod tests {
             .expect_generate()
             .times(1)
             .withf(|x, y, z| (x, y, z) == ("1", "foo", &1.0))
-            .returning(|_, _, _| Ok(vec![0x00, 0x01, 0x02, 0x03]));
+            .returning(|_, _, _| Box::pin(ok(vec![0x00, 0x01, 0x02, 0x03])));
 
         let mock_audio_processor = MockAudioProcessor::new();
 
@@ -149,14 +148,14 @@ mod tests {
             .expect_generate()
             .times(1)
             .withf(|x, y, z| (x, y, z) == ("1", "bar", &1.0))
-            .returning(|_, _, _| Ok(vec![0x00, 0x01, 0x02, 0x03]));
+            .returning(|_, _, _| Box::pin(ok(vec![0x00, 0x01, 0x02, 0x03])));
 
         let mut mock_audio_processor = MockAudioProcessor::new();
         mock_audio_processor
             .expect_compress()
             .times(1)
             .withf(|x| x == &[0x00, 0x01, 0x02, 0x03])
-            .returning(|_| Ok(vec![0x04, 0x05]));
+            .returning(|_| Box::pin(ok(vec![0x04, 0x05])));
 
         mock_audio_processor
             .expect_to_input()

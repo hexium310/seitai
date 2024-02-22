@@ -1,43 +1,70 @@
+use std::future::Future;
+
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use hyper::{body::Bytes, Body, Client as HttpClient, Request as _Request, StatusCode};
 use url::Url;
 
-#[async_trait]
 pub trait Request: Send + Sync {
     fn base(&self) -> &Url;
 
-    async fn get(&self, endpoint: &str, parameters: &[(&str, &str)]) -> Result<(StatusCode, Bytes)> {
-        let url = self.url(endpoint, parameters);
-        let req = _Request::get(url.as_str())
-            .body(Body::empty())
-            .with_context(|| format!("failed to request with GET {url}"))?;
-        request(req).await
+    fn get(
+        &self,
+        endpoint: &str,
+        parameters: &[(&str, &str)],
+    ) -> impl Future<Output = Result<(StatusCode, Bytes)>> + Send {
+        async move {
+            let url = self.url(endpoint, parameters);
+            let req = _Request::get(url.as_str())
+                .body(Body::empty())
+                .with_context(|| format!("failed to request with GET {url}"))?;
+            request(req).await
+        }
     }
 
-    async fn post(&self, endpoint: &str, parameters: &[(&str, &str)], body: Body) -> Result<(StatusCode, Bytes)> {
-        let url = self.url(endpoint, parameters);
-        let req = _Request::post(url.as_str())
-            .header("content-type", "application/json")
-            .body(body)
-            .with_context(|| format!("failed to request with POST {url}"))?;
-        request(req).await
+    fn post(
+        &self,
+        endpoint: &str,
+        parameters: &[(&str, &str)],
+        body: Body,
+    ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
+        async move {
+            let url = self.url(endpoint, parameters);
+            let req = _Request::post(url.as_str())
+                .header("content-type", "application/json")
+                .body(body)
+                .with_context(|| format!("failed to request with POST {url}"))?;
+            request(req).await
+        }
     }
 
-    async fn put(&self, endpoint: &str, parameters: &[(&str, &str)], body: Body) -> Result<(StatusCode, Bytes)> {
-        let url = self.url(endpoint, parameters);
-        let req = _Request::put(url.as_str())
-            .body(body)
-            .with_context(|| format!("failed to request with PUT {url}"))?;
-        request(req).await
+    fn put(
+        &self,
+        endpoint: &str,
+        parameters: &[(&str, &str)],
+        body: Body,
+    ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
+        async move {
+            let url = self.url(endpoint, parameters);
+            let req = _Request::put(url.as_str())
+                .body(body)
+                .with_context(|| format!("failed to request with PUT {url}"))?;
+            request(req).await
+        }
     }
 
-    async fn delete(&self, endpoint: &str, parameters: &[(&str, &str)], body: Body) -> Result<(StatusCode, Bytes)> {
-        let url = self.url(endpoint, parameters);
-        let req = _Request::delete(url.as_str())
-            .body(body)
-            .with_context(|| format!("failed to request with DELETE {url}"))?;
-        request(req).await
+    fn delete(
+        &self,
+        endpoint: &str,
+        parameters: &[(&str, &str)],
+        body: Body,
+    ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
+        async move {
+            let url = self.url(endpoint, parameters);
+            let req = _Request::delete(url.as_str())
+                .body(body)
+                .with_context(|| format!("failed to request with DELETE {url}"))?;
+            request(req).await
+        }
     }
 
     fn url(&self, endpoint: &str, parameters: &[(&str, &str)]) -> Url {
