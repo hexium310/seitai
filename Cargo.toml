@@ -4,7 +4,7 @@ default-members = ["seitai"]
 resolver = "2"
 
 [workspace.dependencies.anyhow]
-version = "1.0.79"
+version = "1.0.80"
 
 [workspace.dependencies.logging]
 path = "crates/logging"
