@@ -2247,7 +2247,6 @@ name = "seitai"
 version = "0.1.18"
 dependencies = [
  "anyhow",
- "async-trait",
  "futures",
  "hashbrown",
  "indexmap",
@@ -3578,7 +3577,6 @@ name = "voicevox"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "hyper",
  "indexmap",
  "serde",
