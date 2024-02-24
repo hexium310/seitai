@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
+use futures::TryStreamExt;
 use sea_query::{Expr, JoinType, OnConflict, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
-use serenity::futures::TryStreamExt;
 use sqlx::{FromRow, PgPool};
 
 use super::identifier;

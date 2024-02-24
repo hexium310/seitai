@@ -1,9 +1,10 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Error, Result};
+use futures::lock::Mutex;
 use hashbrown::HashMap;
 use logging::initialize_logging;
-use serenity::{client::Client, futures::lock::Mutex, model::gateway::GatewayIntents, prelude::TypeMapKey};
+use serenity::{client::Client, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::SerenityInit;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},

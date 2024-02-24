@@ -1,4 +1,5 @@
 use anyhow::{bail, Context as _, Result};
+use futures::{future, stream, StreamExt};
 use hashbrown::HashMap;
 use indexmap::IndexMap;
 use ordered_float::NotNan;
@@ -6,7 +7,6 @@ use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
     builder::{CreateCommand, CreateCommandOption, CreateEmbed, CreateInteractionResponseMessage},
     client::Context,
-    futures::{future, stream, StreamExt},
     model::{application::CommandInteraction, Colour},
 };
 use songbird::input::Input;

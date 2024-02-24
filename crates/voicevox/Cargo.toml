@@ -6,9 +6,6 @@ edition = "2021"
 [dependencies.anyhow]
 workspace = true
 
-[dependencies.async-trait]
-version = "0.1.72"
-
 [dependencies.hyper]
 version = "0.14.27"
 features = ["http1", "client", "runtime"]

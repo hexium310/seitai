@@ -1,11 +1,11 @@
 use std::{borrow::Cow, sync::Arc};
 
 use anyhow::{Context as _, Result};
+use futures::lock::Mutex;
 use serenity::{
     all::{GuildId, User},
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
     client::Context,
-    futures::lock::Mutex,
     model::{application::CommandInteraction, guild::Guild},
     utils::{content_safe, ContentSafeOptions},
 };

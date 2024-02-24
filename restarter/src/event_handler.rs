@@ -1,13 +1,12 @@
-use std::sync::Arc;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use anyhow::{bail, Result};
+use futures::lock::Mutex;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::{Api, Client, Config};
 use serenity::{
     all::VoiceState,
-    async_trait,
     client::{Context, EventHandler},
-    futures::lock::Mutex,
     model::gateway::Ready,
 };
 use tokio::sync::Notify;
@@ -17,40 +16,60 @@ use crate::Data;
 
 pub struct Handler;
 
-#[async_trait]
 impl EventHandler for Handler {
     #[instrument(skip(self, context))]
-    async fn ready(&self, context: Context, ready: Ready) {
+    fn ready<'s, 'async_trait>(
+        &'s self,
+        context: Context,
+        ready: Ready,
+    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    where
+        Self: 'async_trait,
+        's: 'async_trait,
+    {
         tracing::info!("{} is ready", ready.user.name);
 
-        let Some(data) = get_data(&context).await else {
-            tracing::error!("failed to get data");
-            return;
-        };
-        data.lock().await.bot_id = ready.user.id;
+        Box::pin(async move {
+            let Some(data) = get_data(&context).await else {
+                tracing::error!("failed to get data");
+                return;
+            };
+            data.lock().await.bot_id = ready.user.id;
+        })
     }
 
-    async fn voice_state_update(&self, context: Context, _old: Option<VoiceState>, new: VoiceState) {
-        let Some(data) = get_data(&context).await else {
-            tracing::error!("failed to get data");
-            return;
-        };
-        let mut data = data.lock().await;
-        let bot_id = data.bot_id;
-
-        if new.user_id == bot_id {
-            // When bot joined a voice channel
-            if let (Some(channel_id), Some(guild_id)) = (new.channel_id, new.guild_id) {
-                data.connected_channels.insert(guild_id, channel_id);
-                data.cancellation.notify_one();
-            // When bot left a voice channel
-            } else if let (None, Some(guild_id)) = (new.channel_id, new.guild_id) {
-                data.connected_channels.remove(&guild_id);
-                if data.connected_channels.is_empty() {
-                    wait_restart(&context).await;
-                }
+    fn voice_state_update<'s, 'async_trait>(
+        &'s self,
+        context: Context,
+        _old: Option<VoiceState>,
+        new: VoiceState,
+    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    where
+        Self: 'async_trait,
+        's: 'async_trait,
+    {
+        Box::pin(async move {
+            let Some(data) = get_data(&context).await else {
+                tracing::error!("failed to get data");
+                return;
             };
-        }
+            let mut data = data.lock().await;
+            let bot_id = data.bot_id;
+
+            if new.user_id == bot_id {
+                // When bot joined a voice channel
+                if let (Some(channel_id), Some(guild_id)) = (new.channel_id, new.guild_id) {
+                    data.connected_channels.insert(guild_id, channel_id);
+                    data.cancellation.notify_one();
+                // When bot left a voice channel
+                } else if let (None, Some(guild_id)) = (new.channel_id, new.guild_id) {
+                    data.connected_channels.remove(&guild_id);
+                    if data.connected_channels.is_empty() {
+                        wait_restart(&context).await;
+                    }
+                };
+            }
+        })
     }
 }
 

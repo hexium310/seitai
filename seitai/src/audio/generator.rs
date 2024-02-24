@@ -1,16 +1,15 @@
+use std::future::Future;
+
 use anyhow::Result;
-use async_trait::async_trait;
 use voicevox::Bytes;
 
 #[cfg_attr(test, mockall::automock(type Raw = Vec<u8>;))]
-#[async_trait]
 pub(crate) trait AudioGenerator {
     type Raw;
 
-    async fn generate(&self, speaker: &str, text: &str, speed: f32) -> Result<Self::Raw>;
+    fn generate(&self, speaker: &str, text: &str, speed: f32) -> impl Future<Output = Result<Self::Raw>> + Send;
 }
 
-#[async_trait]
 impl AudioGenerator for voicevox::audio::AudioGenerator {
     type Raw = Bytes;
 

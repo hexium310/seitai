@@ -1,10 +1,10 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc};
 
+use futures::lock::Mutex;
 use logging::initialize_logging;
 use serenity::{
     all::{ChannelId, GuildId, UserId},
     client::Client,
-    futures::lock::Mutex,
     model::gateway::GatewayIntents,
     prelude::TypeMapKey,
 };
