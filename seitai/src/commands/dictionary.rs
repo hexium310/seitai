@@ -295,7 +295,6 @@ async fn register_word(
             respond(context, interaction, &message).await?;
         },
         PostUserDictWordResult::UnprocessableEntity(error) => {
-            tracing::error!("failed to register {word} into dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の登録に失敗しました。")
@@ -303,6 +302,7 @@ async fn register_word(
                     .colour(Colour::RED),
             );
             respond(context, interaction, &message).await?;
+            bail!("failed to register {word} into dictionary\nError: {error:?}");
         },
     };
 
@@ -337,7 +337,6 @@ async fn update_word(
             respond(context, interaction, &message).await?;
         },
         PutUserDictWordResult::UnprocessableEntity(error) => {
-            tracing::error!("failed to update {word} in dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の更新に失敗しました。")
@@ -345,6 +344,7 @@ async fn update_word(
                     .colour(Colour::RED),
             );
             respond(context, interaction, &message).await?;
+            bail!("failed to update {word} in dictionary\nError: {error:?}");
         },
     };
 
@@ -369,7 +369,6 @@ async fn delete_word(
             respond(context, interaction, &message).await?;
         },
         DeleteUserDictWordResult::UnprocessableEntity(error) => {
-            tracing::error!("failed to delete {word} in dictionary\nError: {error:?}");
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
                     .title("単語の削除に失敗しました。")
@@ -377,6 +376,7 @@ async fn delete_word(
                     .colour(Colour::RED),
             );
             respond(context, interaction, &message).await?;
+            bail!("failed to delete {word} in dictionary\nError: {error:?}");
         },
     };
 
