@@ -1956,6 +1956,7 @@ name = "restarter"
 version = "0.1.3"
 dependencies = [
  "anyhow",
+ "futures",
  "k8s-openapi",
  "kube",
  "logging",

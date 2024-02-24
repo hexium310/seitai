@@ -1,13 +1,13 @@
 use std::{borrow::Cow, future::Future, pin::Pin, sync::Arc};
 
 use anyhow::Context as _;
+use futures::{future::join_all, lock::Mutex, stream, StreamExt};
 use hashbrown::HashMap;
 use lazy_regex::Regex;
 use ordered_float::NotNan;
 use serenity::{
     all::{ChannelId as SerenityChannelId, ChannelType, GuildId, VoiceState},
     client::{Context, EventHandler},
-    futures::{future::join_all, lock::Mutex, StreamExt},
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
@@ -410,7 +410,7 @@ async fn handle_connect<Repository>(
         .flatten();
     let connected = Some(PredefinedUtterance::Connected.as_ref().to_string());
 
-    let inputs = serenity::futures::stream::iter([user_is, connected].into_iter().flatten())
+    let inputs = stream::iter([user_is, connected].into_iter().flatten())
         .map(|text| async move {
             let audio = Audio {
                 text,

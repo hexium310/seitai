@@ -92,8 +92,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use ordered_float::NotNan;
     use futures::future::ok;
+    use ordered_float::NotNan;
 
     use super::{Audio, AudioRepository, VoicevoxAudioRepository};
     use crate::audio::{cache::MockCacheable, generator::MockAudioGenerator, processor::MockAudioProcessor};

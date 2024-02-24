@@ -1,12 +1,12 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
 use anyhow::{bail, Result};
+use futures::lock::Mutex;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::{Api, Client, Config};
 use serenity::{
     all::VoiceState,
     client::{Context, EventHandler},
-    futures::lock::Mutex,
     model::gateway::Ready,
 };
 use tokio::sync::Notify;
