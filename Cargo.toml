@@ -10,7 +10,7 @@ version = "1.0.80"
 path = "crates/logging"
 
 [workspace.dependencies.serenity]
-version = "0.12.0"
+version = "0.12.1"
 default-features = false
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
 
