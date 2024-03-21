@@ -1,3 +1,5 @@
+CREATE SCHEMA seitai AUTHORIZATION seitai;
+
 CREATE TABLE "speakers" (
     "id" int NOT NULL,
     "speed" float4,
