@@ -22,5 +22,5 @@ features = ["macros", "net", "rt-multi-thread", "signal"]
 version = "0.1.40"
 
 [workspace.dependencies.uuid]
-version = "1.7.0"
+version = "1.8.0"
 features = ["v4", "serde"]
