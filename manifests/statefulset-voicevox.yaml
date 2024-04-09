@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: voicevox
-          image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.14.5
+          image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.18.1
           ports:
             - containerPort: 50021
           resources:
