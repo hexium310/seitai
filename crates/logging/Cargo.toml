@@ -8,5 +8,5 @@ version = "0.3.36"
 features = ["macros"]
 
 [dependencies.tracing-subscriber]
-version = "0.3.17"
+version = "0.3.18"
 features = ["env-filter", "time"]
