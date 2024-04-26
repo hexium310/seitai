@@ -1,5 +1,5 @@
 [workspace]
-members = ["seitai", "restarter"]
+members = ["logging", "restarter", "seitai", "voicevox"]
 default-members = ["seitai"]
 resolver = "2"
 
