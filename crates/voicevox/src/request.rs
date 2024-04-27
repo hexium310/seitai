@@ -31,7 +31,7 @@ pub trait Request: Send + Sync {
         &self,
         endpoint: &str,
         parameters: &[(&str, &str)],
-        body: impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
+        body: impl Body<Data = impl Send, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
         async move {
             let url = self.url(endpoint, parameters);
@@ -47,7 +47,7 @@ pub trait Request: Send + Sync {
         &self,
         endpoint: &str,
         parameters: &[(&str, &str)],
-        body: impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
+        body: impl Body<Data = impl Send, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
         async move {
             let url = self.url(endpoint, parameters);
@@ -62,7 +62,7 @@ pub trait Request: Send + Sync {
         &self,
         endpoint: &str,
         parameters: &[(&str, &str)],
-        body: impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
+        body: impl Body<Data = impl Send, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
         async move {
             let url = self.url(endpoint, parameters);
@@ -85,7 +85,7 @@ pub trait Request: Send + Sync {
 
 async fn request(
     request: _Request<
-        impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
+        impl Body<Data = impl Send, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     >,
 ) -> Result<(StatusCode, Bytes)> {
     let http_client = HttpClient::builder(TokioExecutor::new()).build_http();
