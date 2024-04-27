@@ -1,7 +1,13 @@
-use std::future::Future;
+use std::{error::Error, future::Future};
 
 use anyhow::{Context, Result};
-use hyper::{body::Bytes, Body, Client as HttpClient, Request as _Request, StatusCode};
+use http_body_util::{BodyExt, Empty};
+use hyper::{
+    body::{Body, Bytes},
+    Request as _Request,
+    StatusCode,
+};
+use hyper_util::{client::legacy::Client as HttpClient, rt::TokioExecutor};
 use url::Url;
 
 pub trait Request: Send + Sync {
@@ -15,7 +21,7 @@ pub trait Request: Send + Sync {
         async move {
             let url = self.url(endpoint, parameters);
             let req = _Request::get(url.as_str())
-                .body(Body::empty())
+                .body(Empty::<Bytes>::new())
                 .with_context(|| format!("failed to request with GET {url}"))?;
             request(req).await
         }
@@ -25,7 +31,7 @@ pub trait Request: Send + Sync {
         &self,
         endpoint: &str,
         parameters: &[(&str, &str)],
-        body: Body,
+        body: impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
         async move {
             let url = self.url(endpoint, parameters);
@@ -41,7 +47,7 @@ pub trait Request: Send + Sync {
         &self,
         endpoint: &str,
         parameters: &[(&str, &str)],
-        body: Body,
+        body: impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
         async move {
             let url = self.url(endpoint, parameters);
@@ -56,7 +62,7 @@ pub trait Request: Send + Sync {
         &self,
         endpoint: &str,
         parameters: &[(&str, &str)],
-        body: Body,
+        body: impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
     ) -> impl std::future::Future<Output = Result<(StatusCode, Bytes)>> + Send {
         async move {
             let url = self.url(endpoint, parameters);
@@ -77,11 +83,15 @@ pub trait Request: Send + Sync {
     }
 }
 
-async fn request(request: _Request<Body>) -> Result<(StatusCode, Bytes)> {
-    let http_client = HttpClient::new();
+async fn request(
+    request: _Request<
+        impl Body<Data = impl Send + Sync, Error = impl Into<Box<dyn Error + Send + Sync>>> + Send + Unpin + 'static,
+    >,
+) -> Result<(StatusCode, Bytes)> {
+    let http_client = HttpClient::builder(TokioExecutor::new()).build_http();
     let response = http_client.request(request).await?;
     let status = response.status();
-    let bytes = hyper::body::to_bytes(response.into_body()).await?;
+    let bytes = response.into_body().collect().await?.to_bytes();
 
     Ok((status, bytes))
 }
