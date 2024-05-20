@@ -19,7 +19,7 @@ version = "1.0.200"
 features = ["derive"]
 
 [dependencies.serde_json]
-version = "1.0.116"
+version = "1.0.117"
 
 [dependencies.tracing]
 workspace = true
