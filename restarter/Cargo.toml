@@ -14,7 +14,7 @@ version = "0.22.0"
 features = ["v1_30"]
 
 [dependencies.kube]
-version = "0.88.1"
+version = "0.91.0"
 
 [dependencies.logging]
 workspace = true
