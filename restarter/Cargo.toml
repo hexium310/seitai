@@ -11,7 +11,7 @@ version = "0.3.30"
 
 [dependencies.k8s-openapi]
 version = "0.22.0"
-features = ["v1_27"]
+features = ["v1_30"]
 
 [dependencies.kube]
 version = "0.88.1"
