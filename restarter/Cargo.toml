@@ -10,11 +10,11 @@ workspace = true
 version = "0.3.30"
 
 [dependencies.k8s-openapi]
-version = "0.21.1"
-features = ["v1_27"]
+version = "0.22.0"
+features = ["latest"]
 
 [dependencies.kube]
-version = "0.88.1"
+version = "0.91.0"
 
 [dependencies.logging]
 workspace = true
