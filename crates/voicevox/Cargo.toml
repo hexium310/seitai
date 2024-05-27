@@ -31,6 +31,9 @@ version = "1.0.117"
 [dependencies.tracing]
 workspace = true
 
+[dependencies.tokio]
+workspace = true
+
 [dependencies.uuid]
 workspace = true
 
