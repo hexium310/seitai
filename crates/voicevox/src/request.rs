@@ -40,7 +40,7 @@ pub trait Request: Send + Sync {
             let url = self.url(endpoint, parameters);
             let uri = format!("{}?{}", url.path(), url.query().unwrap_or_default());
             let req = _Request::post(uri)
-                .header("content-type", "application/json")
+                .header(hyper::header::CONTENT_TYPE, "application/json")
                 .header(hyper::header::HOST, url.authority())
                 .body(body)
                 .with_context(|| format!("failed to request with POST {url}"))?;
