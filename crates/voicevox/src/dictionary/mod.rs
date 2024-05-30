@@ -1,7 +1,8 @@
 pub mod response;
 
 use anyhow::{bail, Result};
-use hyper::{Body, StatusCode};
+use http_body_util::Empty;
+use hyper::{body::Bytes, StatusCode};
 use url::Url;
 use uuid::Uuid;
 
@@ -29,7 +30,7 @@ impl Dictionary {
     }
 
     pub async fn register_word(&self, parameters: &[(&str, &str)]) -> Result<PostUserDictWordResult> {
-        let (status, bytes) = self.post("user_dict_word", parameters, Body::empty()).await?;
+        let (status, bytes) = self.post("user_dict_word", parameters, Empty::<Bytes>::new()).await?;
         match status {
             StatusCode::OK => Ok(PostUserDictWordResult::Ok(Uuid::parse_str(&String::from_utf8(
                 bytes.to_vec(),
@@ -43,7 +44,7 @@ impl Dictionary {
 
     pub async fn update_word(&self, uuid: &Uuid, parameters: &[(&str, &str)]) -> Result<PutUserDictWordResult> {
         let (status, bytes) = self
-            .put(&format!("user_dict_word/{uuid}"), parameters, Body::empty())
+            .put(&format!("user_dict_word/{uuid}"), parameters, Empty::<Bytes>::new())
             .await?;
         match status {
             StatusCode::NO_CONTENT => Ok(PutUserDictWordResult::NoContent),
@@ -56,7 +57,7 @@ impl Dictionary {
 
     pub async fn delete_word(&self, uuid: &Uuid) -> Result<DeleteUserDictWordResult> {
         let (status, bytes) = self
-            .delete(&format!("user_dict_word/{uuid}"), &[], Body::empty())
+            .delete(&format!("user_dict_word/{uuid}"), &[], Empty::<Bytes>::new())
             .await?;
         match status {
             StatusCode::NO_CONTENT => Ok(DeleteUserDictWordResult::NoContent),

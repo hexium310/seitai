@@ -1,7 +1,8 @@
 pub mod response;
 
 use anyhow::{bail, Context as _, Result};
-use hyper::{body::Bytes, Body, StatusCode};
+use http_body_util::{Empty, Full};
+use hyper::{body::Bytes, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::Url;
@@ -42,7 +43,11 @@ pub type Audio = Bytes;
 impl AudioGenerator {
     pub async fn generate_query(&self, speaker: &str, text: &str) -> Result<PostAudioQueryResult> {
         let (status, bytes) = self
-            .post("audio_query", &[("speaker", speaker), ("text", text)], Body::empty())
+            .post(
+                "audio_query",
+                &[("speaker", speaker), ("text", text)],
+                Empty::<Bytes>::new(),
+            )
             .await?;
         match status {
             StatusCode::OK => Ok(PostAudioQueryResult::Ok(serde_json::from_slice(&bytes)?)),
@@ -55,7 +60,11 @@ impl AudioGenerator {
 
     pub async fn synthesize(&self, speaker: &str, json: &str) -> Result<PostSynthesisResult> {
         let (status, bytes) = self
-            .post("synthesis", &[("speaker", speaker)], Body::from(json.to_owned()))
+            .post(
+                "synthesis",
+                &[("speaker", speaker)],
+                Full::<Bytes>::from(json.to_owned()),
+            )
             .await?;
         match status {
             StatusCode::OK => Ok(PostSynthesisResult::Ok(bytes)),
