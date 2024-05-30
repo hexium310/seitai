@@ -14,7 +14,7 @@ use crate::request::Request;
 #[serde(rename_all = "camelCase")]
 pub struct AudioQuery {
     #[serde(rename = "accent_phrases")]
-    pub accent_phrases: Value,
+    pub accent_phrases: Vec<AccentPhrases>,
     pub speed_scale: f32,
     pub pitch_scale: f32,
     pub intonation_scale: f32,
@@ -24,6 +24,14 @@ pub struct AudioQuery {
     pub output_sampling_rate: u32,
     pub output_stereo: bool,
     pub kana: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AccentPhrases {
+    pub moras: Vec<Value>,
+    pub accent: f32,
+    pub pause_mora: Value,
+    pub is_interrogative: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -88,7 +96,12 @@ impl AudioGenerator {
         };
 
         // TODO: Truncate message too long
-        audio_query.speed_scale = speed + (text.len() / 50) as f32 * 0.1;
+        let mora_length = audio_query
+            .accent_phrases
+            .iter()
+            .map(|accent_phrases| accent_phrases.moras.len())
+            .sum::<usize>();
+        audio_query.speed_scale = speed + (mora_length / 50) as f32 * 0.1;
 
         let json = serde_json::to_string(&audio_query)?;
         match self
