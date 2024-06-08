@@ -57,7 +57,7 @@ pub trait Request: Send + Sync {
         async move {
             let url = self.url(endpoint, parameters);
             let uri = format!("{}?{}", url.path(), url.query().unwrap_or_default());
-            let req = _Request::post(uri)
+            let req = _Request::put(uri)
                 .header(hyper::header::HOST, url.authority())
                 .body(body)
                 .with_context(|| format!("failed to request with PUT {url}"))?;
@@ -74,7 +74,7 @@ pub trait Request: Send + Sync {
         async move {
             let url = self.url(endpoint, parameters);
             let uri = format!("{}?{}", url.path(), url.query().unwrap_or_default());
-            let req = _Request::post(uri)
+            let req = _Request::delete(uri)
                 .header(hyper::header::HOST, url.authority())
                 .body(body)
                 .with_context(|| format!("failed to request with DELETE {url}"))?;
