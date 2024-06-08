@@ -121,10 +121,23 @@ where
             },
             // TODO: Paginate
             "list" => {
-                let GetUserDictResult::Ok(list) = dictionary
+                let response = match dictionary
                     .list()
-                    .await
-                    .context("failed to get dictionary for /dictionary list command")?;
+                    .await {
+                    Ok(response) => response,
+                    Err(error) => {
+                        let message = CreateInteractionResponseMessage::new().embed(
+                            CreateEmbed::new()
+                                .title("単語の更新に失敗しました。")
+                                .field("詳細", format!("```\n{}\n```", error), false)
+                                .colour(Colour::RED),
+                        );
+                        respond(context, interaction, &message).await?;
+                        bail!("failed to get dictionary for /dictionary list command\nError: {error:?}");
+                    }
+                };
+
+                let GetUserDictResult::Ok(list) = response;
                 let words = list
                     .values()
                     .map(|item| format!("{} -> {}", to_half_width(&item.surface), item.pronunciation))
@@ -283,7 +296,21 @@ async fn register_word(
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect::<Vec<_>>();
 
-    match dictionary.register_word(&parameters).await? {
+    let response = match dictionary.register_word( &parameters).await {
+        Ok(response) => response,
+        Err(error) => {
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                    .title("単語の登録に失敗しました。")
+                    .field("詳細", format!("```\n{}\n```", error), false)
+                    .colour(Colour::RED),
+            );
+            respond(context, interaction, &message).await?;
+            bail!("failed to register {word} into dictionary\nError: {error:?}");
+        },
+    };
+
+    match response {
         PostUserDictWordResult::Ok(_id) => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
@@ -325,7 +352,21 @@ async fn update_word(
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect::<Vec<_>>();
 
-    match dictionary.update_word(uuid, &parameters).await? {
+    let response = match dictionary.update_word(uuid, &parameters).await {
+        Ok(response) => response,
+        Err(error) => {
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                    .title("単語の更新に失敗しました。")
+                    .field("詳細", format!("```\n{}\n```", error), false)
+                    .colour(Colour::RED),
+            );
+            respond(context, interaction, &message).await?;
+            bail!("failed to update {word} in dictionary\nError: {error:?}");
+        },
+    };
+
+    match response {
         PutUserDictWordResult::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
@@ -358,7 +399,21 @@ async fn delete_word(
     uuid: &Uuid,
     word: &str,
 ) -> Result<()> {
-    match dictionary.delete_word(uuid).await? {
+    let response = match dictionary.delete_word(uuid).await {
+        Ok(response) => response,
+        Err(error) => {
+            let message = CreateInteractionResponseMessage::new().embed(
+                CreateEmbed::new()
+                    .title("単語の削除に失敗しました。")
+                    .field("詳細", format!("```\n{}\n```", error), false)
+                    .colour(Colour::RED),
+            );
+            respond(context, interaction, &message).await?;
+            bail!("failed to delete {word} in dictionary\nError: {error:?}");
+        },
+    };
+
+    match response {
         DeleteUserDictWordResult::NoContent => {
             let message = CreateInteractionResponseMessage::new().embed(
                 CreateEmbed::new()
