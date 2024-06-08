@@ -26,7 +26,11 @@ use crate::{
 
 const SYSTEM_SPEAKER: &str = "1";
 
-pub(crate) async fn run<'a, Repository>(context: &Context, audio_repository: &Repository, interaction: &CommandInteraction) -> Result<()>
+pub(crate) async fn run<'a, Repository>(
+    context: &Context,
+    audio_repository: &Repository,
+    interaction: &CommandInteraction,
+) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
@@ -121,9 +125,7 @@ where
             },
             // TODO: Paginate
             "list" => {
-                let response = match dictionary
-                    .list()
-                    .await {
+                let response = match dictionary.list().await {
                     Ok(response) => response,
                     Err(error) => {
                         let message = CreateInteractionResponseMessage::new().embed(
@@ -134,7 +136,7 @@ where
                         );
                         respond(context, interaction, &message).await?;
                         bail!("failed to get dictionary for /dictionary list command\nError: {error:?}");
-                    }
+                    },
                 };
 
                 let GetUserDictResult::Ok(list) = response;
@@ -296,7 +298,7 @@ async fn register_word(
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect::<Vec<_>>();
 
-    let response = match dictionary.register_word( &parameters).await {
+    let response = match dictionary.register_word(&parameters).await {
         Ok(response) => response,
         Err(error) => {
             let message = CreateInteractionResponseMessage::new().embed(
