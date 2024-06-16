@@ -39,6 +39,8 @@ services:
     environment:
       DISCORD_TOKEN:
       VOICEVOX_HOST: voicevox
+      KANATRANS_HOST: kanatrans
+      KANATRANS_PORT: 8080
       PGHOST: database
       PGDATABASE: seitai
       PGUSER: seitai
@@ -67,6 +69,15 @@ services:
     command: /bin/sh -c 'cargo run -p restarter'
     environment:
       DISCORD_TOKEN:
+
+  kanatrans:
+    image: ghcr.io/hexium310/kanatrans
+    environment:
+      KANATRANS_PORT: 8080
+      RUST_LOG: kanatrans=info
+    ports:
+      - 8080:8080
+
   database:
     image: postgres:16
     environment:
