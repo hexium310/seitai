@@ -10,3 +10,4 @@ pub(crate) static MENTION_CHANNEL: Lazy<Regex> = lazy_regex!(r"<[@#].+>");
 pub(crate) static URL: Lazy<Regex> = lazy_regex!(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+");
 pub(crate) static W: Lazy<Regex> = lazy_regex!(r"([^ｗ[:word:]]|^)[wｗ]([^ｗ[:word:]]|$)");
 pub(crate) static WW: Lazy<Regex> = lazy_regex!(r"([^ｗ[:word:]]|^)[wｗ]{2,}([^ｗ[:word:]]|$)");
+pub(crate) static WORD: Lazy<Regex> = lazy_regex!(r"[[:alpha:]]{2,}");
