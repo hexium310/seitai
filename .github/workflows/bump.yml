@@ -1,0 +1,44 @@
+name: Bump
+on:
+  workflow_dispatch:
+    inputs:
+      version_part:
+        description: 'Version part to bump'
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      package:
+        description: 'Target package'
+        required: true
+        type: string
+
+jobs:
+  tag:
+    name: Create tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BUMP_TOKEN }}
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+      - name: Push tag
+        env:
+          VERSION_PART: ${{ github.event.inputs.version_part }}
+          PACKAGE: ${{ github.event.inputs.package }}
+        run: |
+          cargo set-version --bump "$VERSION_PART" --package "$PACKAGE"
+          version="$(cargo metadata --format-version 1 --no-deps | jq --raw-output --arg package "$PACKAGE" '.packages[] | select(.name == $package) | .version')"
+          tag="$PACKAGE/$version"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit --message "$(echo Bump $PACKAGE to $VERSION_PART)"
+          git tag $tag
+          git push
+          git push --tags
