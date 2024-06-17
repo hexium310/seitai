@@ -36,7 +36,7 @@ workspace = true
 version = "4.2.0"
 
 [dependencies.regex-lite]
-version = "0.1.5"
+version = "0.1.6"
 
 [dependencies.sea-query]
 version = "0.30.7"
