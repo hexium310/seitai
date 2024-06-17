@@ -18,7 +18,7 @@ on:
 
 jobs:
   tag:
-    name: Create tag
+    name: Bump
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -27,7 +27,7 @@ jobs:
           token: ${{ secrets.BUMP_TOKEN }}
       - name: Install cargo-edit
         run: cargo install cargo-edit
-      - name: Push tag
+      - name: Create tag
         env:
           VERSION_PART: ${{ github.event.inputs.version_part }}
           PACKAGE: ${{ github.event.inputs.package }}
