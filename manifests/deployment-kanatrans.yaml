@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kanatrans
+spec:
+  selector:
+    matchLabels:
+      app: kanatrans
+  template:
+    metadata:
+      labels:
+        app: kanatrans
+    spec:
+      containers:
+        - name: kanatrans
+          image: ghcr.io/hexium310/kanatrans
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KANATRANS_PORT
+              value: "8080"
+            - name: RUST_LOG
+              value: kanatrans=info

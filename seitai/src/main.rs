@@ -47,6 +47,25 @@ async fn main() {
         },
     };
 
+    let kanatrans_host = match env::var("KANATRANS_HOST") {
+        Ok(token) => token,
+        Err(error) => {
+            tracing::error!("failed to fetch environment variable KANATRANS_HOST\nError: {error:?}");
+            exit(1);
+        },
+    };
+
+    let kanatrans_port = match env::var("KANATRANS_PORT")
+        .map_err(Error::from)
+        .and_then(|port| port.parse::<u16>().map_err(Error::from))
+    {
+        Ok(token) => token,
+        Err(error) => {
+            tracing::error!("failed to fetch environment variable KANATRANS_PORT\nError: {error:?}");
+            exit(1);
+        },
+    };
+
     let pool = match set_up_database().await {
         Ok(pool) => pool,
         Err(error) => {
@@ -81,6 +100,8 @@ async fn main() {
             speaker,
             audio_repository,
             connections: Arc::new(Mutex::new(HashMap::new())),
+            kanatrans_host,
+            kanatrans_port,
         })
         .register_songbird()
         .await

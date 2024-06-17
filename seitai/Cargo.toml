@@ -12,6 +12,15 @@ version = "0.3.30"
 [dependencies.hashbrown]
 version = "0.14.5"
 
+[dependencies.http-body-util]
+workspace = true
+
+[dependencies.hyper]
+workspace = true
+
+[dependencies.hyper-util]
+workspace = true
+
 [dependencies.indexmap]
 version = "2.2.6"
 features = ["serde"]
@@ -38,6 +47,12 @@ features = ["backend-postgres", "derive", "thread-safe"]
 version = "0.5.0"
 features = ["sqlx-postgres"]
 
+[dependencies.serde]
+workspace = true
+
+[dependencies.serde_json]
+workspace = true
+
 [dependencies.serenity]
 workspace = true
 features = ["builder", "collector"]
@@ -62,6 +77,9 @@ features = ["wav"]
 workspace = true
 
 [dependencies.tracing]
+workspace = true
+
+[dependencies.url]
 workspace = true
 
 [dependencies.uuid]

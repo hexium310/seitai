@@ -1,10 +1,25 @@
-use std::{borrow::Cow, future::Future, pin::Pin, sync::Arc};
+use std::{borrow::Cow, error::Error, future::Future, pin::Pin, sync::Arc};
 
-use anyhow::Context as _;
-use futures::{future::join_all, lock::Mutex, stream, StreamExt};
-use hashbrown::HashMap;
+use anyhow::{bail, Context as _, Result};
+use futures::{
+    future::{self, join_all},
+    lock::Mutex,
+    stream,
+    StreamExt,
+    TryFutureExt,
+};
+use hashbrown::{HashMap, HashSet};
+use http_body_util::{BodyExt, Empty};
+use hyper::{
+    body::{Body, Buf, Bytes},
+    Request,
+    StatusCode,
+};
+use hyper_util::rt::TokioIo;
 use lazy_regex::Regex;
 use ordered_float::NotNan;
+use regex_lite::Captures;
+use serde::{de::DeserializeOwned, Deserialize};
 use serenity::{
     all::{ChannelId as SerenityChannelId, ChannelType, GuildId, VoiceState},
     client::{Context, EventHandler},
@@ -12,15 +27,19 @@ use serenity::{
 };
 use songbird::{input::Input, Call};
 use sqlx::PgPool;
+use tokio::net::TcpStream;
 use tracing::instrument;
+use url::Url;
+use voicevox::dictionary::response::GetUserDictResult;
 
 use crate::{
     audio::{cache::PredefinedUtterance, Audio, AudioRepository},
+    character_converter::to_half_width,
     commands,
     database,
     regex,
     speaker::Speaker,
-    utils::{get_manager, normalize},
+    utils::{get_manager, get_voicevox, normalize},
 };
 
 #[derive(Debug)]
@@ -29,10 +48,24 @@ pub(crate) struct Handler<Repository> {
     pub(crate) speaker: Speaker,
     pub(crate) audio_repository: Repository,
     pub(crate) connections: Arc<Mutex<HashMap<GuildId, SerenityChannelId>>>,
+    pub(crate) kanatrans_host: String,
+    pub(crate) kanatrans_port: u16,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct Arpabet {
+    word: String,
+    pronunciation: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct Katakana {
+    pronunciation: String,
 }
 
 enum Replacement {
     General(&'static Regex, &'static str),
+    Katakana(&'static Regex),
 }
 
 const SYSTEM_SPEAKER: &str = "1";
@@ -187,7 +220,34 @@ where
                 };
 
             {
-                for text in replace_message(&context, &message).split('\n') {
+                let dictionary = {
+                    let voicevox = get_voicevox(&context)
+                        .await
+                        .context("failed to get voicevox client for /dictionary command")
+                        .unwrap();
+                    let voicevox = voicevox.lock().await;
+                    voicevox.dictionary.clone()
+                };
+                let dictionary_words = dictionary
+                    .list()
+                    .await
+                    .map(|GetUserDictResult::Ok(list)| {
+                        list.values()
+                            .map(|item| to_half_width(&item.surface).into_owned())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+
+                for text in replace_message(
+                    &context,
+                    &message,
+                    &self.kanatrans_host,
+                    self.kanatrans_port,
+                    &dictionary_words,
+                )
+                .await
+                .split('\n')
+                {
                     let text = text.trim();
                     if text.is_empty() {
                         continue;
@@ -358,7 +418,13 @@ where
     }
 }
 
-fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> {
+async fn replace_message<'a>(
+    context: &Context,
+    message: &'a Message,
+    kanatrans_host: &str,
+    kanatrans_port: u16,
+    dictionary_words: &[String],
+) -> Cow<'a, str> {
     let Some(guild_id) = message.guild_id else {
         return Cow::Borrowed(&message.content);
     };
@@ -370,18 +436,81 @@ fn replace_message<'a>(context: &Context, message: &'a Message) -> Cow<'a, str> 
         Replacement::General(&regex::W, "$1ワラ$2"),
         Replacement::General(&regex::IDEOGRAPHIC_FULL_STOP, "。\n"),
         Replacement::General(&regex::EMOJI, ":$1:"),
+        Replacement::Katakana(&regex::WORD),
     ];
 
     let text = normalize(context, &guild_id, &message.mentions, &message.content);
-    replacements
-        .into_iter()
-        .fold(text, |accumulator, replacement| match replacement {
-            Replacement::General(regex, replacer) => match regex.replace_all(&accumulator, replacer) {
-                Cow::Borrowed(borrowed) if borrowed.len() == accumulator.len() => accumulator,
-                Cow::Borrowed(borrowed) => Cow::Owned(borrowed.to_owned()),
-                Cow::Owned(owned) => Cow::Owned(owned),
-            },
+    stream::iter(replacements.into_iter())
+        .fold(text, |accumulator, replacement| async move {
+            match replacement {
+                Replacement::General(regex, replacer) => match regex.replace_all(&accumulator, replacer) {
+                    Cow::Borrowed(borrowed) if borrowed.len() == accumulator.len() => accumulator,
+                    Cow::Borrowed(borrowed) => Cow::Owned(borrowed.to_owned()),
+                    Cow::Owned(owned) => Cow::Owned(owned),
+                },
+                Replacement::Katakana(regex) => {
+                    let accumulator = &accumulator;
+
+                    let conversion_map = stream::iter(
+                        regex
+                            .find_iter(accumulator)
+                            .map(|word| word.as_str())
+                            .collect::<HashSet<_>>(),
+                    )
+                    .map(|word| async move {
+                        if word.chars().all(char::is_uppercase)
+                            || dictionary_words.iter().any(|dictionary_word| dictionary_word == word)
+                        {
+                            return None;
+                        }
+
+                        match get_arpabet(kanatrans_host, kanatrans_port, &word)
+                            .and_then(|arpabet| async move {
+                                get_katakana(
+                                    kanatrans_host,
+                                    kanatrans_port,
+                                    Some(&arpabet.word),
+                                    &arpabet.pronunciation,
+                                )
+                                .await
+                            })
+                            .await
+                        {
+                            Ok(katakana) => Some((word, katakana.pronunciation)),
+                            Err(err) => {
+                                tracing::error!("failed to get katakana\nError: {err:?}");
+                                None
+                            },
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .await;
+
+                    let conversion_map = future::join_all(conversion_map)
+                        .await
+                        .into_iter()
+                        .filter_map(|v| v)
+                        .collect::<HashMap<_, _>>();
+
+                    if conversion_map.is_empty() {
+                        return accumulator.to_owned();
+                    }
+
+                    match regex.replace_all(accumulator, |captures: &Captures| {
+                        let word = &captures[0];
+                        match conversion_map.get(word) {
+                            Some(pronunciation) => pronunciation.to_owned(),
+                            None => word.to_owned(),
+                        }
+                    }) {
+                        Cow::Borrowed(borrowed) if borrowed.len() == accumulator.len() => accumulator.to_owned(),
+                        Cow::Borrowed(borrowed) => Cow::Owned(borrowed.to_owned()),
+                        Cow::Owned(owned) => Cow::Owned(owned),
+                    }
+                },
+            }
         })
+        .await
 }
 
 async fn handle_connect<Repository>(
@@ -430,5 +559,71 @@ async fn handle_connect<Repository>(
 
     for input in join_all(inputs).await.into_iter().flatten() {
         call.enqueue_input(input).await;
+    }
+}
+
+async fn request<RequestBody, Response>(url: Url, request: Request<RequestBody>) -> Result<(StatusCode, Response)>
+where
+    RequestBody: Body + Send + Unpin + 'static,
+    RequestBody::Data: Send,
+    RequestBody::Error: Into<Box<dyn Error + Send + Sync>>,
+    Response: DeserializeOwned,
+{
+    let address = url.socket_addrs(|| None)?;
+    let stream = TcpStream::connect(&*address).await?;
+    let io = TokioIo::new(stream);
+    let (mut sender, connection) = hyper::client::conn::http1::handshake(io).await?;
+
+    tokio::task::spawn(async move {
+        if let Err(error) = connection.await {
+            tracing::error!("connection failed\nError: {error:?}");
+        }
+    });
+
+    let response = sender.send_request(request).await?;
+    let status = response.status();
+    let body = response.collect().await?.aggregate();
+    let json = serde_json::from_reader(body.reader())?;
+
+    Ok((status, json))
+}
+
+async fn get_arpabet(host: &str, port: u16, word: &str) -> Result<Arpabet> {
+    let url = Url::parse(&format!("http://{host}:{port}/arpabet/{word}"))?;
+    let req = Request::get(url.path())
+        .header(hyper::header::HOST, url.authority())
+        .body(Empty::<Bytes>::new())
+        .with_context(|| format!("failed to request with GET {url}"))?;
+    let (status, arpabet) = request(url, req).await?;
+
+    match status {
+        StatusCode::OK => Ok(arpabet),
+        StatusCode::UNPROCESSABLE_ENTITY => bail!("cannot convert {word} to ARPAbet"),
+        code => bail!("received unexpected {code} from GET /arpabet/{word}"),
+    }
+}
+
+async fn get_katakana(host: &str, port: u16, word: Option<&str>, pronunciation: &[String]) -> Result<Katakana> {
+    let pronunciation = pronunciation.join(" ");
+    let mut params = HashMap::new();
+    params.insert("pronunciation", pronunciation.as_str());
+    if let Some(word) = word {
+        params.insert("word", word);
+    }
+    let url = Url::parse_with_params(&format!("http://{host}:{port}/katakana"), params)?;
+    let uri = format!("{}?{}", url.path(), url.query().unwrap_or_default());
+    let req = Request::get(uri)
+        .header(hyper::header::HOST, url.authority())
+        .header(hyper::header::CONTENT_TYPE, "application/json")
+        .body(Empty::<Bytes>::new())
+        .with_context(|| format!("failed to request with GET {url}"))?;
+    let (status, katakana) = request(url.clone(), req).await?;
+
+    match status {
+        StatusCode::OK => Ok(katakana),
+        code => bail!(
+            "received unexpected {code} from GET /katakana with {}",
+            url.query().unwrap_or_default()
+        ),
     }
 }
