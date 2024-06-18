@@ -19,6 +19,10 @@ spec:
           env:
             - name: VOICEVOX_HOST
               value: voicevox
+            - name: KANATRANS_HOST
+              value: kanatrans
+            - name: KANATRANS_PORT
+              value: "8080"
             - name: DISCORD_TOKEN
               valueFrom:
                 secretKeyRef:
