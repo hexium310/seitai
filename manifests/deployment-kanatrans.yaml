@@ -21,4 +21,4 @@ spec:
             - name: KANATRANS_PORT
               value: "8080"
             - name: RUST_LOG
-              value: kanatrans=info
+              value: kanatrans=info,tower_http=trace
