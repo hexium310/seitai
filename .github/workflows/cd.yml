@@ -31,7 +31,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build image
         id: build
-        uses: docker/bake-action@v4
+        uses: docker/bake-action@v5
         with:
           push: true
           targets: ${{ env.TARGETS }}
