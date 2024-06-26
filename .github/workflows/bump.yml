@@ -26,7 +26,9 @@ jobs:
         with:
           token: ${{ secrets.BUMP_TOKEN }}
       - name: Install cargo-edit
-        run: cargo install cargo-edit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-edit
       - name: Create tag
         env:
           VERSION_PART: ${{ github.event.inputs.version_part }}
