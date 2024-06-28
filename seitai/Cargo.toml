@@ -67,7 +67,7 @@ features = ["postgres", "runtime-tokio", "tls-native-tls"]
 
 [dependencies.strum]
 features = ["derive"]
-version = "0.26.2"
+version = "0.26.3"
 
 [dependencies.symphonia]
 version = "0.5.4"
