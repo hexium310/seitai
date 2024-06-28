@@ -43,5 +43,5 @@ version = "0.1.40"
 version = "2.5.2"
 
 [workspace.dependencies.uuid]
-version = "1.8.0"
+version = "1.9.1"
 features = ["v4", "serde"]
