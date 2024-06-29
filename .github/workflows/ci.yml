@@ -25,5 +25,6 @@ jobs:
       - name: Run clippy
         uses: giraffate/clippy-action@v1
         with:
+          level: warning
           reporter: 'github-pr-review'
           github_token: ${{ secrets.GITHUB_TOKEN }}
