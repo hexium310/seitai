@@ -17,6 +17,8 @@ spec:
           image: ghcr.io/hexium310/seitai
           imagePullPolicy: Always
           env:
+            - name: NO_COLOR
+              value: '1'
             - name: VOICEVOX_HOST
               value: voicevox
             - name: KANATRANS_HOST
@@ -43,6 +45,8 @@ spec:
           image: ghcr.io/hexium310/restarter
           imagePullPolicy: Always
           env:
+            - name: NO_COLOR
+              value: '1'
             - name: DISCORD_TOKEN
               valueFrom:
                 secretKeyRef:

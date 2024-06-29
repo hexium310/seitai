@@ -22,3 +22,5 @@ spec:
               value: "8080"
             - name: RUST_LOG
               value: kanatrans=info,tower_http=trace
+            - name: NO_COLOR
+              value: '1'
