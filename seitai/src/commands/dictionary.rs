@@ -245,19 +245,18 @@ pub fn register() -> CreateCommand {
         .set_options(vec![add, list, delete])
 }
 
-fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<String, String>> {
+fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<&str, String>> {
     if let CommandDataOptionValue::SubCommand(value) = value {
         let subcommand_options = value
             .iter()
             .map(|subcommand_option| {
-                let name = subcommand_option.name.clone();
                 match &subcommand_option.value {
-                    CommandDataOptionValue::String(value) => (name, value.to_string()),
-                    CommandDataOptionValue::Integer(value) => (name, value.to_string()),
+                    CommandDataOptionValue::String(value) => (subcommand_option.name.as_str(), value.to_string()),
+                    CommandDataOptionValue::Integer(value) => (subcommand_option.name.as_str(), value.to_string()),
                     _ => unreachable!(),
                 }
             })
-            .collect::<HashMap<_, _>>();
+            .collect();
 
         Some(subcommand_options)
     } else {
@@ -285,7 +284,7 @@ async fn register_word(
     context: &Context,
     interaction: &CommandInteraction,
     dictionary: &Dictionary,
-    property: &HashMap<String, String>,
+    property: &HashMap<&str, String>,
 ) -> Result<()> {
     let word = property
         .get("surface")
@@ -295,7 +294,7 @@ async fn register_word(
         .context("there is no pronunciation to register word")?;
     let parameters = property
         .iter()
-        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .map(|(&key, value)| (key, value.as_str()))
         .collect::<Vec<_>>();
 
     let response = match dictionary.register_word(&parameters).await {
@@ -343,7 +342,7 @@ async fn update_word(
     interaction: &CommandInteraction,
     dictionary: &Dictionary,
     uuid: &Uuid,
-    property: &HashMap<String, String>,
+    property: &HashMap<&str, String>,
 ) -> Result<()> {
     let word = property.get("surface").context("there is no surface to update word")?;
     let pronunciation = property
@@ -351,7 +350,7 @@ async fn update_word(
         .context("there is no pronunciation to update word")?;
     let parameters = property
         .iter()
-        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .map(|(&key, value)| (key, value.as_str()))
         .collect::<Vec<_>>();
 
     let response = match dictionary.update_word(uuid, &parameters).await {
