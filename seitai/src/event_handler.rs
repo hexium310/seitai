@@ -464,7 +464,7 @@ async fn replace_message<'a>(
                             return None;
                         }
 
-                        match get_arpabet(kanatrans_host, kanatrans_port, &word)
+                        match get_arpabet(kanatrans_host, kanatrans_port, word)
                             .and_then(|arpabet| async move {
                                 get_katakana(
                                     kanatrans_host,
@@ -489,21 +489,23 @@ async fn replace_message<'a>(
                     let conversion_map = future::join_all(conversion_map)
                         .await
                         .into_iter()
-                        .filter_map(|v| v)
+                        .flatten()
                         .collect::<HashMap<_, _>>();
 
                     if conversion_map.is_empty() {
-                        return accumulator.to_owned();
+                        return accumulator.clone();
                     }
 
-                    match regex.replace_all(accumulator, |captures: &Captures| {
+                    let replaced = regex.replace_all(accumulator, |captures: &Captures| {
                         let word = &captures[0];
                         match conversion_map.get(word) {
                             Some(pronunciation) => pronunciation.to_owned(),
                             None => word.to_owned(),
                         }
-                    }) {
-                        Cow::Borrowed(borrowed) if borrowed.len() == accumulator.len() => accumulator.to_owned(),
+                    });
+
+                    match replaced {
+                        Cow::Borrowed(borrowed) if borrowed.len() == accumulator.len() => accumulator.clone(),
                         Cow::Borrowed(borrowed) => Cow::Owned(borrowed.to_owned()),
                         Cow::Owned(owned) => Cow::Owned(owned),
                     }
