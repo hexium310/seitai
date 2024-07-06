@@ -17,30 +17,10 @@ on:
         type: string
 
 jobs:
-  tag:
+  bump:
     name: Bump
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BUMP_TOKEN }}
-      - name: Install cargo-edit
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-edit
-      - name: Create tag
-        env:
-          VERSION_PART: ${{ github.event.inputs.version_part }}
-          PACKAGE: ${{ github.event.inputs.package }}
-        run: |
-          cargo set-version --bump "$VERSION_PART" --package "$PACKAGE"
-          version="$(cargo metadata --format-version 1 --no-deps | jq --raw-output --arg package "$PACKAGE" '.packages[] | select(.name == $package) | .version')"
-          tag="$PACKAGE/$version"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit --message "$(echo Bump $PACKAGE to $version)"
-          git tag $tag
-          git push
-          git push --tags
+    uses: hexium310/workflows/.github/workflows/bump.yml@master
+    with:
+      version_part: ${{ github.event.inputs.version_part }}
+      package: ${{ github.event.inputs.package }}
+    secrets: inherit
