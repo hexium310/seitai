@@ -19,6 +19,9 @@ updates:
         patterns:
           - kube
           - k8s-openapi
+      sea-query:
+        patterns:
+          - 'sea-query*'
     open-pull-requests-limit: 50
   - directory: /
     package-ecosystem: docker
