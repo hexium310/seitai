@@ -22,7 +22,7 @@ workspace = true
 workspace = true
 
 [dependencies.indexmap]
-version = "2.2.6"
+version = "2.3.0"
 features = ["serde"]
 
 [dependencies.lazy-regex]
