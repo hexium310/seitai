@@ -29,3 +29,31 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: restarter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: seitai:deploy
+rules:
+  - apiGroups:
+      - apps
+    resourceNames:
+      - seitai
+    resources:
+      - statefulsets
+    verbs:
+      - get
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: seitai:deploy
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: github-actions:repo:hexium310/seitai
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: seitai:deploy
