@@ -7,7 +7,7 @@ edition = "2021"
 workspace = true
 
 [dependencies.futures]
-version = "0.3.30"
+version = "0.3.31"
 
 [dependencies.hashbrown]
 version = "0.14.5"
