@@ -33,7 +33,7 @@ default-features = false
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
 
 [workspace.dependencies.tokio]
-version = "1.40.0"
+version = "1.41.0"
 features = ["macros", "net", "rt-multi-thread", "signal"]
 
 [workspace.dependencies.tracing]
