@@ -21,7 +21,7 @@ features = ["client", "client-legacy", "http1", "tokio"]
 path = "crates/logging"
 
 [workspace.dependencies.serde]
-version = "1.0.213"
+version = "1.0.214"
 features = ["derive"]
 
 [workspace.dependencies.serde_json]
