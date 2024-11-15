@@ -28,7 +28,7 @@ features = ["derive"]
 version = "1.0.132"
 
 [workspace.dependencies.serenity]
-version = "0.12.2"
+version = "0.12.4"
 default-features = false
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
 
