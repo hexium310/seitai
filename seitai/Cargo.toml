@@ -1,6 +1,6 @@
 [package]
 name = "seitai"
-version = "0.1.23"
+version = "0.1.24"
 edition = "2021"
 
 [dependencies.anyhow]
@@ -33,7 +33,7 @@ features = ["lite"]
 workspace = true
 
 [dependencies.ordered-float]
-version = "4.3.0"
+version = "4.5.0"
 
 [dependencies.regex-lite]
 version = "0.1.6"
@@ -58,7 +58,7 @@ workspace = true
 features = ["builder", "collector"]
 
 [dependencies.songbird]
-version = "0.4.3"
+version = "0.4.5"
 features = ["builtin-queue"]
 
 [dependencies.sqlx]
@@ -89,4 +89,4 @@ workspace = true
 path = "../crates/voicevox"
 
 [dev-dependencies.mockall]
-version = "0.13.0"
+version = "0.13.1"

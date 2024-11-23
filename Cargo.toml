@@ -4,44 +4,44 @@ default-members = ["seitai"]
 resolver = "2"
 
 [workspace.dependencies.anyhow]
-version = "1.0.89"
+version = "1.0.93"
 
 [workspace.dependencies.http-body-util]
 version = "0.1.2"
 
 [workspace.dependencies.hyper]
-version = "1.4.1"
+version = "1.5.1"
 features = ["client", "http1"]
 
 [workspace.dependencies.hyper-util]
-version = "0.1.9"
+version = "0.1.10"
 features = ["client", "client-legacy", "http1", "tokio"]
 
 [workspace.dependencies.logging]
 path = "crates/logging"
 
 [workspace.dependencies.serde]
-version = "1.0.210"
+version = "1.0.215"
 features = ["derive"]
 
 [workspace.dependencies.serde_json]
-version = "1.0.128"
+version = "1.0.133"
 
 [workspace.dependencies.serenity]
-version = "0.12.2"
+version = "0.12.4"
 default-features = false
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
 
 [workspace.dependencies.tokio]
-version = "1.40.0"
+version = "1.41.1"
 features = ["macros", "net", "rt-multi-thread", "signal"]
 
 [workspace.dependencies.tracing]
 version = "0.1.40"
 
 [workspace.dependencies.url]
-version = "2.5.2"
+version = "2.5.3"
 
 [workspace.dependencies.uuid]
-version = "1.10.0"
+version = "1.11.0"
 features = ["v4", "serde"]
