@@ -12,7 +12,7 @@ services:
       VIRTUAL_PORT: 50021
     ports:
       - 50021:50021
-    image: voicevox/voicevox_engine:cpu-ubuntu20.04-latest
+    image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.18.1
 
   seitai:
     build:
