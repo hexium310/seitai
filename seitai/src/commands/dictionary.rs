@@ -55,7 +55,7 @@ where
     for option in &interaction.data.options {
         let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
         subcommand_options
-            .entry_ref("surface")
+            .entry("surface")
             .and_replace_entry_with(|_key, word| {
                 let text = normalize(context, &guild_id, &users, &word);
                 Some(regex::EMOJI.replace_all(&text, ":$1:").into_owned())
@@ -63,10 +63,10 @@ where
 
         match option.name.as_str() {
             "add" => {
-                subcommand_options.entry_ref("accent_type").or_insert("0".to_string());
-                subcommand_options.entry_ref("priority").or_insert("10".to_string());
+                subcommand_options.entry("accent_type").or_insert("0".to_string());
+                subcommand_options.entry("priority").or_insert("10".to_string());
                 subcommand_options
-                    .entry_ref("pronunciation")
+                    .entry("pronunciation")
                     .and_replace_entry_with(|_key, pronunciation| Some(to_katakana(&*pronunciation).into_owned()));
 
                 let word = subcommand_options
