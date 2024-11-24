@@ -1,5 +1,6 @@
 # syntax = docker/dockerfile:1
 FROM rust:1.82-slim-bookworm AS runtime
+WORKDIR /usr/src/myapp
 RUN --mount=type=cache,id=api:/var/cache/apt,target=/var/cache/apt \
     --mount=type=cache,id=api:/var/lib/apt/lists,target=/var/lib/apt/lists \
     apt-get update && apt-get install --no-install-recommends -y \
@@ -9,12 +10,14 @@ RUN --mount=type=cache,id=api:/var/cache/apt,target=/var/cache/apt \
     && rm -rf /var/lib/apt/lists/*
 
 FROM runtime AS development
-WORKDIR /usr/src/myapp
 
 FROM runtime AS builder
-WORKDIR /usr/src/myapp
-COPY . .
-RUN --mount=type=cache,target=/usr/src/myapp/target \
+RUN --mount=type=bind,source=crates,target=crates \
+    --mount=type=bind,source=restarter,target=restarter \
+    --mount=type=bind,source=seitai,target=seitai \
+    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
+    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
+    --mount=type=cache,target=/usr/src/myapp/target \
     cargo build --release --workspace \
     && cp target/release/restarter /restarter \
     && cp target/release/seitai /seitai
