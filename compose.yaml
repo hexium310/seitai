@@ -1,15 +1,5 @@
 services:
-  reverse-proxy:
-    image: nginxproxy/nginx-proxy:1.4
-    ports:
-      - 80:80
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-
   voicevox:
-    environment:
-      VIRTUAL_HOST: ${VOICEVOX_HOST}
-      VIRTUAL_PORT: 50021
     ports:
       - 50021:50021
     image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.18.1
@@ -84,8 +74,6 @@ services:
       POSTGRES_DB: seitai
       POSTGRES_USER: seitai
       POSTGRES_PASSWORD: seitai
-      VIRTUAL_HOST: ${PGHOST}
-      VIRTUAL_PORT: 5432
     ports:
       - '5432:5432'
     volumes:
