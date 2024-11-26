@@ -23,7 +23,7 @@ pub(crate) struct UserSpeaker {
 
 impl Default for User {
     fn default() -> Self {
-        Self { id: 0, speaker_id: 1 }
+        Self { id: 0, speaker_id: 888753760 }
     }
 }
 
@@ -31,13 +31,13 @@ impl Default for UserSpeaker {
     fn default() -> Self {
         Self {
             id: 0,
-            speaker_id: 1,
+            speaker_id: 888753760,
             speed: Some(1.2),
         }
     }
 }
 
-pub(crate) async fn create(database: &PgPool, user_id: u64, speaker_id: u16) -> Result<User> {
+pub(crate) async fn create(database: &PgPool, user_id: u64, speaker_id: u32) -> Result<User> {
     let mut connection = database.acquire().await?;
 
     let (sql, values) = Query::insert()

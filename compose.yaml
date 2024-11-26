@@ -1,13 +1,37 @@
 services:
+  # Avoids denying the permission for accessing to /home/user/.local/share/AivisSpeech-Engine-Dev in voicevox
+  pre-voicevox:
+    image: busybox
+    volumes:
+      - type: volume
+        source: aivis-data
+        target: /usr/tmp
+    command: /bin/sh -c 'touch /usr/tmp/tmp && chown -R 1000:1000 /usr/tmp'
+
   voicevox:
     ports:
-      - 50021:50021
-    image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.18.1
+      - 10101:10101
+    image: ghcr.io/aivis-project/aivisspeech-engine:cpu-latest
+    depends_on:
+      - pre-voicevox
+    volumes:
+      - type: volume
+        source: aivis-data
+        target: /home/user/.local/share/AivisSpeech-Engine-Dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "localhost:10101"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   seitai:
     build:
       context: .
       target: development
+    depends_on:
+      voicevox:
+        condition: service_healthy
     tty: true
     volumes:
       - type: bind
@@ -86,5 +110,7 @@ services:
         target: /var/lib/postgresql/data
 
 volumes:
+  aivis-data:
+    driver: local
   database:
     driver: local

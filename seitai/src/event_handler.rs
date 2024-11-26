@@ -68,7 +68,7 @@ enum Replacement {
     Katakana(&'static Regex),
 }
 
-const SYSTEM_SPEAKER: &str = "1";
+const SYSTEM_SPEAKER: &str = "888753760";
 
 impl<Repository> EventHandler for Handler<Repository>
 where

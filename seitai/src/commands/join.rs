@@ -77,7 +77,7 @@ where
 
         let audio = Audio {
             text: PredefinedUtterance::Connected.as_ref().to_string(),
-            speaker: "1".to_string(),
+            speaker: "888753760".to_string(),
             speed: NotNan::new(Speaker::default_speed()).unwrap(),
         };
         let input = audio_repository

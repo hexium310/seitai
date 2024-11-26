@@ -26,19 +26,19 @@ pub(crate) async fn run(
     let subcommand = interaction.data.options.first().context("cannot get subcommand")?;
     match subcommand.name.as_str() {
         "use" => {
-            let speaker_id = u16::try_from(
+            let speaker_id = u32::try_from(
                 get_subcommand_option(&subcommand.value, "speaker")
                     .context("cannot get speaker id from `/voice use` argument")?
                     .as_i64()
                     .context(format!("{:?} is not integer", subcommand.value))?,
             )?;
 
-            let speaker_id = u16::try_from(
+            let speaker_id = u32::try_from(
                 database::user::create(database, interaction.user.id.into(), speaker_id)
                     .await?
                     .speaker_id,
             )
-                .context("failed to convert speaker_id to u16")?;
+                .context("failed to convert speaker_id to u32")?;
             let speaker_name = speaker.get_name(speaker_id)?;
 
             let message = CreateInteractionResponseMessage::new().embed(
@@ -50,12 +50,12 @@ pub(crate) async fn run(
             respond(context, interaction, &message).await?;
         },
         "reset" => {
-            let speaker_id = u16::try_from(
-                database::user::create(database, interaction.user.id.into(), 1)
+            let speaker_id = u32::try_from(
+                database::user::create(database, interaction.user.id.into(), 888753760)
                     .await?
                     .speaker_id,
             )
-                .context("failed to convert speaker_id to u16")?;
+                .context("failed to convert speaker_id to u32")?;
             let speaker_name = speaker.get_name(speaker_id)?;
 
             let message = CreateInteractionResponseMessage::new().embed(
@@ -79,7 +79,7 @@ pub(crate) async fn run(
 
             let (id, speed) = {
                 let speaker = database::speaker::create(database, id, speed).await?;
-                (u16::try_from(speaker.id)?, speaker.speed)
+                (u32::try_from(speaker.id)?, speaker.speed)
             };
             let name = speaker.get_name(id)?;
 

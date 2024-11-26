@@ -24,7 +24,7 @@ use crate::{
     utils::{get_manager, get_voicevox, normalize, respond},
 };
 
-const SYSTEM_SPEAKER: &str = "1";
+const SYSTEM_SPEAKER: &str = "888753760";
 
 pub(crate) async fn run<'a, Repository>(
     context: &Context,

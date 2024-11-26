@@ -11,7 +11,7 @@ pub struct Voicevox {
 
 impl Voicevox {
     pub fn build(host: &str) -> Result<Self> {
-        let base = Url::parse(&format!("http://{host}:50021"))?;
+        let base = Url::parse(&format!("http://{host}:10101"))?;
 
         Ok(Self {
             audio_generator: AudioGenerator {

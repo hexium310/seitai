@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::response::UnprocessableEntity;
 
@@ -7,7 +6,7 @@ use crate::response::UnprocessableEntity;
 pub struct Speaker {
     pub supported_features: SupportedFeatures,
     pub name: String,
-    pub speaker_uuid: Uuid,
+    pub speaker_uuid: String,
     pub styles: Vec<Style>,
     pub version: String,
 }
@@ -20,7 +19,7 @@ pub struct SupportedFeatures {
 #[derive(Debug, Deserialize)]
 pub struct Style {
     pub name: String,
-    pub id: u16,
+    pub id: u32,
 }
 
 #[derive(Debug)]

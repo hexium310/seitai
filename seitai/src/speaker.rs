@@ -37,7 +37,7 @@ impl Speaker {
         Ok(Self { speakers })
     }
 
-    pub(crate) fn get_name(&self, speaker_id: u16) -> Result<String> {
+    pub(crate) fn get_name(&self, speaker_id: u32) -> Result<String> {
         let (name_pair, _) = self
             .pairs()
             .find(|(_, id)| id == &speaker_id)
@@ -46,7 +46,7 @@ impl Speaker {
         Ok(format!("{name_pair}"))
     }
 
-    pub(crate) fn pairs(&self) -> impl Iterator<Item = (NamePair, u16)> + '_ {
+    pub(crate) fn pairs(&self) -> impl Iterator<Item = (NamePair, u32)> + '_ {
         Self::to_speaker_tuples(&self.speakers)
     }
 
@@ -54,7 +54,7 @@ impl Speaker {
         1.2
     }
 
-    fn to_speaker_tuples(speakers: &[VoicevoxSpeaker]) -> impl Iterator<Item = (NamePair, u16)> + '_ {
+    fn to_speaker_tuples(speakers: &[VoicevoxSpeaker]) -> impl Iterator<Item = (NamePair, u32)> + '_ {
         speakers.iter().flat_map(|speaker| {
             speaker.styles.iter().map(|style| {
                 (NamePair(speaker.name.as_str(), style.name.as_str()), style.id)
