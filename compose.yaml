@@ -1,23 +1,14 @@
 services:
-  # Avoids denying the permission for accessing to /home/user/.local/share/AivisSpeech-Engine-Dev in voicevox
-  pre-voicevox:
-    image: busybox
-    volumes:
-      - type: volume
-        source: aivis-data
-        target: /usr/tmp
-    command: /bin/sh -c 'touch /usr/tmp/tmp && chown -R 1000:1000 /usr/tmp'
-
   voicevox:
     ports:
       - 10101:10101
     image: ghcr.io/aivis-project/aivisspeech-engine:cpu-latest
-    depends_on:
-      - pre-voicevox
     volumes:
       - type: volume
         source: aivis-data
         target: /home/user/.local/share/AivisSpeech-Engine-Dev
+    post_start:
+      - command: chown -R 1000:1000 /home/user/.local/share/AivisSpeech-Engine-Dev
     healthcheck:
       test: ["CMD", "curl", "-f", "localhost:10101"]
       interval: 5s
