@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies.time]
-version = "0.3.36"
+version = "0.3.37"
 features = ["macros"]
 
 [dependencies.tracing-subscriber]
