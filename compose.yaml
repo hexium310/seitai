@@ -69,7 +69,7 @@ services:
       - 8080:8080
 
   database:
-    image: postgres:16
+    image: postgres:17
     environment:
       POSTGRES_DB: seitai
       POSTGRES_USER: seitai
