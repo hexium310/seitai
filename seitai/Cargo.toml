@@ -59,7 +59,8 @@ features = ["builder", "collector"]
 
 [dependencies.songbird]
 version = "0.4.6"
-features = ["builtin-queue"]
+default-features = false
+features = ["builtin-queue", "driver", "gateway", "native", "serenity"]
 
 [dependencies.sqlx]
 version = "0.8.2"
