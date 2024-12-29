@@ -64,7 +64,8 @@ features = ["builtin-queue", "driver", "gateway", "native", "serenity"]
 
 [dependencies.sqlx]
 version = "0.8.2"
-features = ["postgres", "runtime-tokio", "tls-native-tls"]
+default-features = false
+features = ["macros", "postgres", "runtime-tokio", "tls-native-tls"]
 
 [dependencies.strum]
 features = ["derive"]
