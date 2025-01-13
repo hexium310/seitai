@@ -26,7 +26,7 @@ use crate::{
 
 const SYSTEM_SPEAKER: &str = "1";
 
-pub(crate) async fn run<'a, Repository>(
+pub(crate) async fn run<Repository>(
     context: &Context,
     audio_repository: &Repository,
     interaction: &CommandInteraction,
