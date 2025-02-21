@@ -1,4 +1,4 @@
-use std::{error::Error, future::Future};
+use std::error::Error;
 
 use anyhow::{Context, Result};
 use http_body_util::{BodyExt, Empty};

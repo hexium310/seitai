@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, future::Future, pin::Pin, sync::Arc};
+use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc};
 
 use anyhow::{bail, Context as _, Result};
 use futures::{
@@ -90,8 +90,7 @@ where
                         "dictionary" => commands::dictionary::run(&context, &self.audio_repository, &command).await,
                         "help" => commands::help::run(&context, &command).await,
                         "join" => {
-                            let mut connections = self.connections.lock().await;
-                            commands::join::run(&context, &self.audio_repository, &mut connections, &command).await
+                            commands::join::run(&context, &self.audio_repository, &mut *self.connections.lock().await, &command).await
                         },
                         "leave" => commands::leave::run(&context, &command).await,
                         "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
@@ -465,7 +464,7 @@ async fn replace_message<'a>(
                         }
 
                         match get_arpabet(kanatrans_host, kanatrans_port, word)
-                            .and_then(|arpabet| async move {
+                            .and_then(async |arpabet| {
                                 get_katakana(
                                     kanatrans_host,
                                     kanatrans_port,
@@ -542,7 +541,7 @@ async fn handle_connect<Repository>(
     let connected = Some(PredefinedUtterance::Connected.as_ref().to_string());
 
     let inputs = stream::iter([user_is, connected].into_iter().flatten())
-        .map(|text| async move {
+        .map(async |text| {
             let audio = Audio {
                 text,
                 speaker: SYSTEM_SPEAKER.to_string(),

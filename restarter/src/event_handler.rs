@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc};
 
 use anyhow::{bail, Result};
 use futures::lock::Mutex;

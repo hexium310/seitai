@@ -1,5 +1,4 @@
 use std::{
-    future::Future,
     hash::Hash,
     marker::PhantomData,
     sync::{Arc, Mutex},

@@ -1,5 +1,3 @@
-use std::future::Future;
-
 use anyhow::Result;
 use voicevox::Bytes;
 

@@ -1,5 +1,3 @@
-use std::future::Future;
-
 use anyhow::Result;
 use songbird::{
     driver::Bitrate,

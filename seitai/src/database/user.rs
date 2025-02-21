@@ -38,8 +38,6 @@ impl Default for UserSpeaker {
 }
 
 pub(crate) async fn create(database: &PgPool, user_id: u64, speaker_id: u16) -> Result<User> {
-    let mut connection = database.acquire().await?;
-
     let (sql, values) = Query::insert()
         .into_table(identifier::User::Table)
         .columns([identifier::User::Id, identifier::User::SpeakerId])
@@ -53,14 +51,12 @@ pub(crate) async fn create(database: &PgPool, user_id: u64, speaker_id: u16) -> 
         .build_sqlx(PostgresQueryBuilder);
 
     sqlx::query_as_with::<_, User, _>(&sql, values)
-        .fetch_one(&mut *connection)
+        .fetch_one(&mut *database.acquire().await?)
         .await
         .map_err(Error::msg)
 }
 
 pub(crate) async fn fetch_by_ids(database: &PgPool, ids: &[i64]) -> Result<Vec<User>> {
-    let mut connection = database.acquire().await?;
-
     let (sql, values) = Query::select()
         .columns([identifier::User::Id, identifier::User::SpeakerId])
         .from(identifier::User::Table)
@@ -68,15 +64,13 @@ pub(crate) async fn fetch_by_ids(database: &PgPool, ids: &[i64]) -> Result<Vec<U
         .build_sqlx(PostgresQueryBuilder);
 
     sqlx::query_as_with::<_, User, _>(&sql, values)
-        .fetch(&mut *connection)
+        .fetch(&mut *database.acquire().await?)
         .try_collect()
         .await
         .map_err(Error::msg)
 }
 
 pub(crate) async fn fetch_with_speaker_by_ids(database: &PgPool, ids: &[i64]) -> Result<Vec<UserSpeaker>> {
-    let mut connection = database.acquire().await?;
-
     let (sql, values) = Query::select()
         .columns([
             (identifier::User::Table, identifier::User::Id),
@@ -94,7 +88,7 @@ pub(crate) async fn fetch_with_speaker_by_ids(database: &PgPool, ids: &[i64]) ->
         .build_sqlx(PostgresQueryBuilder);
 
     sqlx::query_as_with::<_, UserSpeaker, _>(&sql, values)
-        .fetch(&mut *connection)
+        .fetch(&mut *database.acquire().await?)
         .try_collect()
         .await
         .map_err(Error::msg)
