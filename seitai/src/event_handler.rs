@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, future::Future, pin::Pin, sync::Arc};
+use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc};
 
 use anyhow::{bail, Context as _, Result};
 use futures::{
