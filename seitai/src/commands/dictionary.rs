@@ -102,7 +102,7 @@ where
                 };
 
                 let inputs = stream::iter([word, PredefinedUtterance::Registered.as_ref()])
-                    .map(|text| async move {
+                    .map(async |text| {
                         let audio = Audio {
                             text: text.to_string(),
                             speaker: SYSTEM_SPEAKER.to_string(),

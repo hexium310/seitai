@@ -464,7 +464,7 @@ async fn replace_message<'a>(
                         }
 
                         match get_arpabet(kanatrans_host, kanatrans_port, word)
-                            .and_then(|arpabet| async move {
+                            .and_then(async |arpabet| {
                                 get_katakana(
                                     kanatrans_host,
                                     kanatrans_port,
@@ -541,7 +541,7 @@ async fn handle_connect<Repository>(
     let connected = Some(PredefinedUtterance::Connected.as_ref().to_string());
 
     let inputs = stream::iter([user_is, connected].into_iter().flatten())
-        .map(|text| async move {
+        .map(async |text| {
             let audio = Audio {
                 text,
                 speaker: SYSTEM_SPEAKER.to_string(),
