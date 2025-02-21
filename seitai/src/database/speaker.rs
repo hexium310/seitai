@@ -20,8 +20,6 @@ where
     Speed: Into<f64>,
     <Id as TryInto<u16>>::Error: std::error::Error + Send + Sync + 'static,
 {
-    let mut connection = database.acquire().await?;
-
     let (sql, values) = Query::insert()
         .into_table(identifier::Speaker::Table)
         .columns([identifier::Speaker::Id, identifier::Speaker::Speed])
@@ -35,7 +33,7 @@ where
         .build_sqlx(PostgresQueryBuilder);
 
     sqlx::query_as_with::<_, Speaker, _>(&sql, values)
-        .fetch_one(&mut *connection)
+        .fetch_one(&mut *database.acquire().await?)
         .await
         .map_err(Error::msg)
 }

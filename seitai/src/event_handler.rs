@@ -90,8 +90,7 @@ where
                         "dictionary" => commands::dictionary::run(&context, &self.audio_repository, &command).await,
                         "help" => commands::help::run(&context, &command).await,
                         "join" => {
-                            let mut connections = self.connections.lock().await;
-                            commands::join::run(&context, &self.audio_repository, &mut connections, &command).await
+                            commands::join::run(&context, &self.audio_repository, &mut *self.connections.lock().await, &command).await
                         },
                         "leave" => commands::leave::run(&context, &command).await,
                         "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
