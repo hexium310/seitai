@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1
-FROM rust:1.84-slim-bookworm AS runtime
+FROM rust:1.85-slim-bookworm AS runtime
 WORKDIR /usr/src/myapp
 RUN --mount=type=cache,id=api:/var/cache/apt,target=/var/cache/apt \
     --mount=type=cache,id=api:/var/lib/apt/lists,target=/var/lib/apt/lists \
