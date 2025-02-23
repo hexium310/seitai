@@ -49,7 +49,7 @@ workspace = true
 
 [dependencies.serenity]
 workspace = true
-features = ["builder", "collector"]
+features = ["builder", "cache", "client", "collector", "gateway", "model", "native_tls_backend"]
 
 [dependencies.songbird]
 version = "0.4.6"

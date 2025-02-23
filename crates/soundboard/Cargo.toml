@@ -1,0 +1,27 @@
+[package]
+name = "soundboard"
+edition = "2024"
+
+[dependencies.reqwest]
+version = "0.12.12"
+features = ["json"]
+
+[dependencies.serde]
+workspace = true
+
+[dependencies.serde_json]
+workspace = true
+
+[dependencies.serde_with]
+version = "3.12.0"
+
+[dependencies.serenity]
+workspace = true
+default-features = false
+features = ["http"]
+
+[dependencies.thiserror]
+version = "2.0.11"
+
+[dependencies.url]
+workspace = true
