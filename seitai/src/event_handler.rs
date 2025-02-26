@@ -1,6 +1,7 @@
 use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc};
 
 use anyhow::{bail, Context as _, Result};
+use database::PgPool;
 use futures::{
     future::{self, join_all},
     lock::Mutex,
@@ -26,7 +27,6 @@ use serenity::{
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
-use sqlx::PgPool;
 use tokio::net::TcpStream;
 use tracing::instrument;
 use url::Url;
@@ -36,7 +36,6 @@ use crate::{
     audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     character_converter::to_half_width,
     commands,
-    database,
     regex,
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize},
@@ -194,7 +193,7 @@ where
             let speaker = match database::user::fetch_by_ids(&self.database, &ids).await {
                 Ok(users) => users
                     .first()
-                    .unwrap_or(&database::User::default())
+                    .unwrap_or(&database::user::User::default())
                     .speaker_id
                     .to_string(),
                 Err(error) => {
@@ -203,7 +202,7 @@ where
                 },
             };
 
-            let default = database::UserSpeaker::default();
+            let default = database::user::UserSpeaker::default();
             let speed =
                 match database::user::fetch_with_speaker_by_ids(&self.database, &[message.author.id.into()]).await {
                     Ok(speakers) => speakers

@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use database::PgPool;
 use serenity::{
     all::{CommandDataOptionValue, CommandOptionType},
     builder::{
@@ -13,9 +14,8 @@ use serenity::{
     client::Context,
     model::{application::CommandInteraction, Colour},
 };
-use sqlx::PgPool;
 
-use crate::{database, speaker::Speaker, utils::respond};
+use crate::{speaker::Speaker, utils::respond};
 
 pub(crate) async fn run(
     context: &Context,

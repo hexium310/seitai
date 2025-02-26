@@ -1,7 +1,7 @@
 [workspace]
-members = ["crates/logging", "crates/voicevox", "restarter", "seitai"]
+members = ["crates/database","crates/logging", "crates/voicevox", "restarter", "seitai"]
 default-members = ["seitai"]
-resolver = "2"
+resolver = "3"
 
 [workspace.dependencies.anyhow]
 version = "1.0.96"

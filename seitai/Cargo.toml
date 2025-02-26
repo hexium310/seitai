@@ -6,6 +6,9 @@ edition = "2024"
 [dependencies.anyhow]
 workspace = true
 
+[dependencies.database]
+path = "../crates/database"
+
 [dependencies.futures]
 version = "0.3.31"
 
@@ -38,15 +41,6 @@ version = "5.0.0"
 [dependencies.regex-lite]
 version = "0.1.6"
 
-[dependencies.sea-query]
-version = "0.32.2"
-default-features = false
-features = ["backend-postgres", "derive", "thread-safe"]
-
-[dependencies.sea-query-binder]
-version = "0.7.0"
-features = ["sqlx-postgres"]
-
 [dependencies.serde]
 workspace = true
 
@@ -61,11 +55,6 @@ features = ["builder", "collector"]
 version = "0.4.6"
 default-features = false
 features = ["builtin-queue", "driver", "gateway", "native", "serenity"]
-
-[dependencies.sqlx]
-version = "0.8.3"
-default-features = false
-features = ["macros", "postgres", "runtime-tokio", "tls-native-tls"]
 
 [dependencies.strum]
 features = ["derive"]

@@ -1,0 +1,28 @@
+[package]
+name = "database"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+futures = "0.3.31"
+
+[dependencies.anyhow]
+workspace = true
+
+[dependencies.sea-query]
+version = "0.32.2"
+default-features = false
+features = ["backend-postgres", "derive", "thread-safe"]
+
+[dependencies.sea-query-binder]
+version = "0.7.0"
+features = ["sqlx-postgres"]
+
+[dependencies.sqlx]
+version = "0.8.3"
+default-features = false
+features = ["postgres", "runtime-tokio", "tls-native-tls"]
+
+[dependencies.sqlx_migrator]
+version = "0.16.2"
+features = ["postgres"]
