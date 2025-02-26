@@ -1,17 +1,18 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Error, Result};
-use ::database::migrations::{Migrate, Migrator, Plan};
+use database::{
+    ConnectOptions,
+    PgConnectOptions,
+    PgPool,
+    PgPoolOptions,
+    migrations::{Migrate, Migrator, Plan},
+};
 use futures::lock::Mutex;
 use hashbrown::HashMap;
 use logging::initialize_logging;
 use serenity::{client::Client, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::SerenityInit;
-use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions},
-    ConnectOptions,
-    PgPool,
-};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::log::LevelFilter;
 use voicevox::Voicevox;
@@ -24,7 +25,6 @@ use crate::{
 mod audio;
 mod character_converter;
 mod commands;
-mod database;
 mod event_handler;
 mod regex;
 mod speaker;

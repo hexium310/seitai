@@ -605,6 +605,7 @@ checksum = "575f75dfd25738df5b91b8e43e14d44bda14637a58fae779fd2b064f8bf3e010"
 name = "database"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "futures",
  "sea-query",
  "sea-query-binder",
@@ -2668,13 +2669,10 @@ dependencies = [
  "mockall",
  "ordered-float 5.0.0",
  "regex-lite",
- "sea-query",
- "sea-query-binder",
  "serde",
  "serde_json",
  "serenity",
  "songbird",
- "sqlx",
  "strum 0.27.1",
  "symphonia",
  "tokio",

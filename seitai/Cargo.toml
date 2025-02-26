@@ -41,13 +41,6 @@ version = "5.0.0"
 [dependencies.regex-lite]
 version = "0.1.6"
 
-[dependencies.sea-query]
-workspace = true
-features = ["derive"]
-
-[dependencies.sea-query-binder]
-workspace = true
-
 [dependencies.serde]
 workspace = true
 
@@ -62,10 +55,6 @@ features = ["builder", "collector"]
 version = "0.4.6"
 default-features = false
 features = ["builtin-queue", "driver", "gateway", "native", "serenity"]
-
-[dependencies.sqlx]
-workspace = true
-features = ["macros"]
 
 [dependencies.strum]
 features = ["derive"]
