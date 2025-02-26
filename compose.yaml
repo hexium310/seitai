@@ -77,10 +77,6 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - type: bind
-        source: ./database
-        target: /docker-entrypoint-initdb.d
-        read_only: true
       - type: volume
         source: database
         target: /var/lib/postgresql/data

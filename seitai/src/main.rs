@@ -1,6 +1,7 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Error, Result};
+use ::database::migrations::{Migrate, Migrator, Plan};
 use futures::lock::Mutex;
 use hashbrown::HashMap;
 use logging::initialize_logging;
@@ -71,6 +72,22 @@ async fn main() {
         Err(error) => {
             tracing::error!("failed to set up postgres\nError: {error:?}");
             exit(1);
+        },
+    };
+
+    // TODO: implement CLI
+    match pool.acquire().await {
+        Ok(mut connection) => {
+            let migrator = Migrator::new();
+            match migrator.run(&mut *connection, &Plan::apply_all()).await {
+                Ok(_) => (),
+                Err(err) => {
+                    tracing::error!("failed to migration\nError: {err:?}");
+                },
+            };
+        },
+        Err(err) => {
+            tracing::error!("failed to acquire database connection for migration\nError: {err:?}");
         },
     };
 

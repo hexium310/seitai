@@ -1,7 +1,7 @@
 [workspace]
-members = ["crates/logging", "crates/voicevox", "restarter", "seitai"]
+members = ["crates/database","crates/logging", "crates/voicevox", "restarter", "seitai"]
 default-members = ["seitai"]
-resolver = "2"
+resolver = "3"
 
 [workspace.dependencies.anyhow]
 version = "1.0.96"
@@ -20,6 +20,15 @@ features = ["client", "client-legacy", "http1", "tokio"]
 [workspace.dependencies.logging]
 path = "crates/logging"
 
+[workspace.dependencies.sea-query]
+version = "0.32.2"
+default-features = false
+features = ["backend-postgres", "thread-safe"]
+
+[workspace.dependencies.sea-query-binder]
+version = "0.7.0"
+features = ["sqlx-postgres"]
+
 [workspace.dependencies.serde]
 version = "1.0.218"
 features = ["derive"]
@@ -31,6 +40,11 @@ version = "1.0.139"
 version = "0.12.4"
 default-features = false
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
+
+[workspace.dependencies.sqlx]
+version = "0.8.3"
+default-features = false
+features = ["postgres", "runtime-tokio", "tls-native-tls"]
 
 [workspace.dependencies.tokio]
 version = "1.43.0"
