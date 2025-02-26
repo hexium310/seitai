@@ -6,4 +6,5 @@ pub use sqlx::{
 
 pub mod migrations;
 pub mod speaker;
+pub mod sticker;
 pub mod user;
