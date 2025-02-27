@@ -3,6 +3,9 @@ name = "logging"
 version = "0.0.0"
 edition = "2024"
 
+[lib]
+doctest = false
+
 [dependencies.time]
 version = "0.3.37"
 features = ["macros"]

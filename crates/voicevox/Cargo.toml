@@ -3,6 +3,9 @@ name = "voicevox"
 version = "0.0.0"
 edition = "2024"
 
+[lib]
+doctest = false
+
 [dependencies.anyhow]
 workspace = true
 

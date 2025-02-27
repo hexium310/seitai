@@ -45,3 +45,6 @@ version = "2.5.4"
 [workspace.dependencies.uuid]
 version = "1.14.0"
 features = ["v4", "serde"]
+
+[profile.dev.package."*"]
+debug = false
