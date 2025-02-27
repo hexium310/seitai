@@ -36,7 +36,7 @@ pub async fn default_soundboards(http: impl AsRef<Http>) -> Result<Vec<Soundboar
     }
 }
 
-pub async fn soundboards(http: impl AsRef<Http>, guild_id: GuildId) -> Result<Soundboard, SoundboardError> {
+pub(crate) async fn soundboards(http: impl AsRef<Http>, guild_id: GuildId) -> Result<Soundboard, SoundboardError> {
     let url = client::BASE_URL
         .join(&format!("guilds/{guild_id}/soundboard-sounds"))
         .map_err(SoundboardError::InvalidUrl)?;
@@ -60,7 +60,7 @@ pub async fn soundboards(http: impl AsRef<Http>, guild_id: GuildId) -> Result<So
     }
 }
 
-pub async fn sound(http: impl AsRef<Http>, guild_id: GuildId, sound_id: SoundId) -> Result<SoundboardSound, SoundboardError> {
+pub(crate) async fn sound(http: impl AsRef<Http>, guild_id: GuildId, sound_id: SoundId) -> Result<SoundboardSound, SoundboardError> {
     let url = client::BASE_URL
         .join(&format!("guilds/{guild_id}/soundboard-sounds/{sound_id}"))
         .map_err(SoundboardError::InvalidUrl)?;
