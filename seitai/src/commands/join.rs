@@ -57,8 +57,6 @@ where
     let manager = get_manager(context).await?;
     let call = manager.get_or_insert(guild.id);
 
-    call.lock().await.deafen(true).await?;
-
     let join = { call.lock().await.join(connect_to).await? };
     join.await?;
 

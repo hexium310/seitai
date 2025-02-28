@@ -27,6 +27,7 @@ use serenity::{
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
+use soundboard::sound::SoundId;
 use tokio::net::TcpStream;
 use tracing::instrument;
 use url::Url;
@@ -188,6 +189,30 @@ where
                 .map(|member| member.user)
                 .any(|user| message.author == user)
             {
+                return;
+            }
+
+            if !message.sticker_items.is_empty() {
+                let sticker_ids = message.sticker_items.into_iter().map(|v| v.id.get());
+                let soundstickers = match database::soundsticker::fetch_by_ids(&self.database, sticker_ids.clone()).await {
+                    Ok(soundstickers) => soundstickers,
+                    Err(err) => {
+                        tracing::error!("failed to fetch soundstickers by ids: {:?}\nError: {err:?}", sticker_ids.collect::<Vec<_>>());
+                        return;
+                    },
+                };
+
+                for soundsticker in soundstickers {
+                    let sound_id = SoundId::new(soundsticker.sound_id);
+                    match sound_id.send(&context.http, channel_id_bot_at, Some(guild_id)).await {
+                        Ok(_) => (),
+                        Err(err) => {
+                            tracing::error!("failed to send soundboard sound {sound_id:?}\nError: {err:?}");
+                            continue;
+                        },
+                    };
+                }
+
                 return;
             }
 
