@@ -3,7 +3,7 @@ use sea_query::{ColumnDef, Expr, Index, PgFunc, PostgresQueryBuilder, Table};
 use sqlx::{PgConnection, Postgres};
 use sqlx_migrator::{migration::Migration, operation::Operation, vec_box};
 
-use crate::sticker::DatabaseSoundticker;
+use crate::soundsticker::DatabaseSoundticker;
 
 pub(crate) struct CreateTableOperation;
 pub(crate) struct CreateIndexOperation;

@@ -7,25 +7,34 @@ edition = "2024"
 doctest = false
 
 [dependencies]
-futures = "0.3.31"
+serde.workspace = true
 
 [dependencies.anyhow]
 workspace = true
 
+[dependencies.futures]
+version = "0.3.31"
+
 [dependencies.sea-query]
 version = "0.32.2"
 default-features = false
-features = ["backend-postgres", "derive", "thread-safe"]
+features = ["backend-postgres", "derive", "thread-safe", "with-uuid"]
 
 [dependencies.sea-query-binder]
 version = "0.7.0"
-features = ["sqlx-postgres"]
+features = ["sqlx-postgres", "with-uuid"]
+
+[dependencies.serde_with]
+version = "3.12.0"
 
 [dependencies.sqlx]
 version = "0.8.3"
 default-features = false
-features = ["postgres", "runtime-tokio", "tls-native-tls"]
+features = ["postgres", "runtime-tokio", "tls-native-tls", "uuid"]
 
 [dependencies.sqlx_migrator]
 version = "0.16.2"
 features = ["postgres"]
+
+[dependencies.uuid]
+workspace = true

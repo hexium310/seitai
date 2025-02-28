@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/database","crates/logging", "crates/soundboard", "crates/voicevox", "restarter", "seitai"]
+members = ["crates/database", "crates/logging", "crates/soundboard", "crates/voicevox", "restarter", "seitai"]
 default-members = ["seitai"]
 resolver = "3"
 
