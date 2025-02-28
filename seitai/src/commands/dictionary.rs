@@ -24,6 +24,8 @@ use crate::{
     utils::{get_manager, get_voicevox, normalize, respond},
 };
 
+use super::subcommand::Subcommand;
+
 const SYSTEM_SPEAKER: &str = "1";
 
 pub(crate) async fn run<Repository>(
@@ -53,7 +55,18 @@ where
     };
 
     for option in &interaction.data.options {
-        let mut subcommand_options = to_option_map(&option.value).unwrap_or_default();
+        let subcommand = Subcommand::from_command_data_option(option).unwrap_or_default();
+        let mut subcommand_options = subcommand
+            .options
+            .into_iter()
+            .map(|(k, v)| {
+                match v {
+                    CommandDataOptionValue::String(v) => (k, v.to_string()),
+                    CommandDataOptionValue::Integer(v) => (k, v.to_string()),
+                    _ => unreachable!(),
+                }
+            })
+            .collect::<HashMap<_, _>>();
         subcommand_options
             .entry("surface")
             .and_replace_entry_with(|_key, word| {
@@ -243,25 +256,6 @@ pub fn register() -> CreateCommand {
     CreateCommand::new("dictionary")
         .description("Dictionary")
         .set_options(vec![add, list, delete])
-}
-
-fn to_option_map(value: &CommandDataOptionValue) -> Option<HashMap<&str, String>> {
-    if let CommandDataOptionValue::SubCommand(value) = value {
-        let subcommand_options = value
-            .iter()
-            .map(|subcommand_option| {
-                match &subcommand_option.value {
-                    CommandDataOptionValue::String(value) => (subcommand_option.name.as_str(), value.to_string()),
-                    CommandDataOptionValue::Integer(value) => (subcommand_option.name.as_str(), value.to_string()),
-                    _ => unreachable!(),
-                }
-            })
-            .collect();
-
-        Some(subcommand_options)
-    } else {
-        None
-    }
 }
 
 async fn get_regsiterd(dictionary: &Dictionary, word: &str) -> Result<Option<Uuid>> {

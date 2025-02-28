@@ -93,6 +93,7 @@ where
                         },
                         "leave" => commands::leave::run(&context, &command).await,
                         "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
+                        "soundsticker" => commands::soundsticker::run(&context, &command, &self.database).await,
                         _ => Ok(()),
                     }
                     .with_context(|| format!("failed to execute /{}", command.data.name));
@@ -104,6 +105,7 @@ where
                 Interaction::Autocomplete(command) => {
                     let result = match command.data.name.as_str() {
                         "voice" => commands::voice::autocomplete(&context, &command, &self.speaker).await,
+                        "soundsticker" => commands::soundsticker::autocomplete(&context, &command).await,
                         _ => Ok(()),
                     }
                     .with_context(|| format!("failed to autocomplete /{}", command.data.name));
@@ -309,6 +311,7 @@ where
                             commands::join::register(),
                             commands::leave::register(),
                             commands::voice::register(),
+                            commands::soundsticker::register(),
                         ],
                     )
                     .await;

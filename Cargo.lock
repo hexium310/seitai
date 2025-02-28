@@ -2977,6 +2977,7 @@ dependencies = [
  "serde_json",
  "serenity",
  "songbird",
+ "soundboard",
  "strum 0.27.1",
  "symphonia",
  "tokio",
