@@ -6,7 +6,7 @@ use serenity::all::{ChannelId, DiscordJsonError, EmojiId, GuildId, Http, User};
 
 use crate::{client, error::SoundboardError};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct SoundId(NonZeroU64);
 
 #[serde_as]

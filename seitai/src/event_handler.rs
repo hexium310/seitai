@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc};
+use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc, time::Duration};
 
 use anyhow::{bail, Context as _, Result};
 use database::PgPool;
@@ -37,6 +37,7 @@ use crate::{
     audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     character_converter::to_half_width,
     commands,
+    time_keepr::TimeKeeper,
     regex,
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize},
@@ -48,6 +49,7 @@ pub(crate) struct Handler<Repository> {
     pub(crate) speaker: Speaker,
     pub(crate) audio_repository: Repository,
     pub(crate) connections: Arc<Mutex<HashMap<GuildId, SerenityChannelId>>>,
+    pub(crate) time_keeper: Arc<Mutex<TimeKeeper<(GuildId, SoundId)>>>,
     pub(crate) kanatrans_host: String,
     pub(crate) kanatrans_port: u16,
 }
@@ -204,8 +206,14 @@ where
 
                 for soundsticker in soundstickers {
                     let sound_id = SoundId::new(soundsticker.sound_id);
+                    let mut last_sent = self.time_keeper.lock().await;
+
+                    if last_sent.is_elapsed(&(guild_id, sound_id), Duration::from_secs(10)) {
+                        continue;
+                    }
+
                     match sound_id.send(&context.http, channel_id_bot_at, Some(guild_id)).await {
-                        Ok(_) => (),
+                        Ok(_) => last_sent.record((guild_id, sound_id)),
                         Err(err) => {
                             tracing::error!("failed to send soundboard sound {sound_id:?}\nError: {err:?}");
                             continue;
