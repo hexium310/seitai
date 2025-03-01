@@ -10,6 +10,7 @@ use database::{
 };
 use futures::lock::Mutex;
 use hashbrown::HashMap;
+use time_keepr::TimeKeeper;
 use logging::initialize_logging;
 use serenity::{client::Client, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::SerenityInit;
@@ -26,6 +27,7 @@ mod audio;
 mod character_converter;
 mod commands;
 mod event_handler;
+mod time_keepr;
 mod regex;
 mod speaker;
 mod utils;
@@ -117,6 +119,7 @@ async fn main() {
             speaker,
             audio_repository,
             connections: Arc::new(Mutex::new(HashMap::new())),
+            time_keeper: Arc::new(Mutex::new(TimeKeeper::new())),
             kanatrans_host,
             kanatrans_port,
         })

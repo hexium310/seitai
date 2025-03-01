@@ -5,6 +5,7 @@ pub use sqlx_migrator::migrator::{Migrate, Plan};
 use sqlx_migrator::{Info, migrator, vec_box};
 
 pub mod v1_users_and_speakers;
+pub mod v2_soundstickers;
 
 pub struct Migrator {
     inner: migrator::Migrator<Postgres>,
@@ -29,6 +30,7 @@ impl Migrator {
         let mut migrator = migrator::Migrator::new();
         migrator.add_migrations(vec_box!(
             v1_users_and_speakers::V1Migration,
+            v2_soundstickers::V2Migration,
         ));
 
         Self { inner: migrator }
