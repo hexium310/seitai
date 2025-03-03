@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc};
+use std::{borrow::Cow, error::Error, pin::Pin, sync::Arc, time::Duration};
 
 use anyhow::{bail, Context as _, Result};
 use database::PgPool;
@@ -27,6 +27,7 @@ use serenity::{
     model::{application::Interaction, channel::Message, gateway::Ready},
 };
 use songbird::{input::Input, Call};
+use soundboard::sound::SoundId;
 use tokio::net::TcpStream;
 use tracing::instrument;
 use url::Url;
@@ -36,6 +37,7 @@ use crate::{
     audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     character_converter::to_half_width,
     commands,
+    time_keepr::TimeKeeper,
     regex,
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize},
@@ -47,6 +49,7 @@ pub(crate) struct Handler<Repository> {
     pub(crate) speaker: Speaker,
     pub(crate) audio_repository: Repository,
     pub(crate) connections: Arc<Mutex<HashMap<GuildId, SerenityChannelId>>>,
+    pub(crate) time_keeper: Arc<Mutex<TimeKeeper<(GuildId, SoundId)>>>,
     pub(crate) kanatrans_host: String,
     pub(crate) kanatrans_port: u16,
 }
@@ -93,6 +96,7 @@ where
                         },
                         "leave" => commands::leave::run(&context, &command).await,
                         "voice" => commands::voice::run(&context, &command, &self.database, &self.speaker).await,
+                        "soundsticker" => commands::soundsticker::run(&context, &command, &self.database).await,
                         _ => Ok(()),
                     }
                     .with_context(|| format!("failed to execute /{}", command.data.name));
@@ -104,6 +108,7 @@ where
                 Interaction::Autocomplete(command) => {
                     let result = match command.data.name.as_str() {
                         "voice" => commands::voice::autocomplete(&context, &command, &self.speaker).await,
+                        "soundsticker" => commands::soundsticker::autocomplete(&context, &command).await,
                         _ => Ok(()),
                     }
                     .with_context(|| format!("failed to autocomplete /{}", command.data.name));
@@ -186,6 +191,36 @@ where
                 .map(|member| member.user)
                 .any(|user| message.author == user)
             {
+                return;
+            }
+
+            if !message.sticker_items.is_empty() {
+                let sticker_ids = message.sticker_items.into_iter().map(|v| v.id.get());
+                let soundstickers = match database::soundsticker::fetch_by_ids(&self.database, sticker_ids.clone()).await {
+                    Ok(soundstickers) => soundstickers,
+                    Err(err) => {
+                        tracing::error!("failed to fetch soundstickers by ids: {:?}\nError: {err:?}", sticker_ids.collect::<Vec<_>>());
+                        return;
+                    },
+                };
+
+                for soundsticker in soundstickers {
+                    let sound_id = SoundId::new(soundsticker.sound_id);
+                    let mut last_sent = self.time_keeper.lock().await;
+
+                    if last_sent.is_elapsed(&(guild_id, sound_id), Duration::from_secs(10)) {
+                        continue;
+                    }
+
+                    match sound_id.send(&context.http, channel_id_bot_at, Some(guild_id)).await {
+                        Ok(_) => last_sent.record((guild_id, sound_id)),
+                        Err(err) => {
+                            tracing::error!("failed to send soundboard sound {sound_id:?}\nError: {err:?}");
+                            continue;
+                        },
+                    };
+                }
+
                 return;
             }
 
@@ -309,6 +344,7 @@ where
                             commands::join::register(),
                             commands::leave::register(),
                             commands::voice::register(),
+                            commands::soundsticker::register(),
                         ],
                     )
                     .await;

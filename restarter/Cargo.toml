@@ -29,3 +29,4 @@ workspace = true
 
 [dependencies.serenity]
 workspace = true
+features = ["cache", "client", "gateway", "model", "native_tls_backend"]
