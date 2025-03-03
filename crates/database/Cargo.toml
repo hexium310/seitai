@@ -6,9 +6,6 @@ edition = "2024"
 [lib]
 doctest = false
 
-[dependencies]
-serde.workspace = true
-
 [dependencies.anyhow]
 workspace = true
 
@@ -35,6 +32,12 @@ features = ["postgres", "runtime-tokio", "tls-native-tls", "uuid"]
 [dependencies.sqlx_migrator]
 version = "0.16.2"
 features = ["postgres"]
+
+[dependencies.serde]
+workspace = true
+
+[dependencies.tracing]
+workspace = true
 
 [dependencies.uuid]
 workspace = true

@@ -635,6 +635,7 @@ dependencies = [
  "serde_with",
  "sqlx",
  "sqlx_migrator",
+ "tracing",
  "uuid",
 ]
 

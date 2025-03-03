@@ -37,6 +37,12 @@ impl FromStr for SoundId {
     }
 }
 
+impl From<u64> for SoundId {
+    fn from(value: u64) -> Self {
+        Self::new(value)
+    }
+}
+
 impl SoundId {
     pub fn new(id: u64) -> Self {
         // Panics according to the treatment of id if NonZeroU64::new() is None

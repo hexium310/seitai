@@ -1,9 +1,9 @@
 use futures::future::BoxFuture;
-use sea_query::{ColumnDef, Expr, Index, PgFunc, PostgresQueryBuilder, Table};
+use sea_query::{ColumnDef, Expr, ForeignKey, ForeignKeyAction, Index, PgFunc, PostgresQueryBuilder, Table};
 use sqlx::{PgConnection, Postgres};
 use sqlx_migrator::{migration::Migration, operation::Operation, vec_box};
 
-use crate::soundsticker::DatabaseSoundticker;
+use crate::{sound::DatabaseSound, soundsticker::DatabaseSoundsticker, sticker::DatabaseSticker};
 
 pub(crate) struct CreateTableOperation;
 pub(crate) struct CreateIndexOperation;
@@ -20,20 +20,60 @@ impl Operation<Postgres> for CreateTableOperation {
         Box::pin(async {
             let sql = Table::create()
                 .if_not_exists()
-                .table(DatabaseSoundticker::Table)
-                .col(ColumnDef::new(DatabaseSoundticker::Id).uuid().default(PgFunc::gen_random_uuid()).primary_key())
+                .table(DatabaseSound::Table)
+                .col(ColumnDef::new(DatabaseSound::Id).uuid().default(PgFunc::gen_random_uuid()).primary_key())
+                .col(ColumnDef::new(DatabaseSound::Name).text())
                 .col(
-                    ColumnDef::new(DatabaseSoundticker::StickerId)
+                    ColumnDef::new(DatabaseSound::SoundId)
                         .big_integer()
                         .not_null()
                         .unique_key()
-                        .check(Expr::col(DatabaseSoundticker::StickerId).gt(0)),
+                        .check(Expr::col(DatabaseSound::SoundId).gt(0)),
                 )
+                .col(ColumnDef::new(DatabaseSound::GuildId).big_integer().check(Expr::col(DatabaseSound::GuildId).gt(0)))
+                .build(PostgresQueryBuilder);
+
+            sqlx::query(&sql).execute(&mut *connection).await?;
+
+            let sql = Table::create()
+                .if_not_exists()
+                .table(DatabaseSticker::Table)
+                .col(ColumnDef::new(DatabaseSticker::Id).uuid().default(PgFunc::gen_random_uuid()).primary_key())
+                .col(ColumnDef::new(DatabaseSticker::Name).text())
                 .col(
-                    ColumnDef::new(DatabaseSoundticker::SoundId)
+                    ColumnDef::new(DatabaseSticker::StickerId)
                         .big_integer()
                         .not_null()
-                        .check(Expr::col(DatabaseSoundticker::SoundId).gt(0)),
+                        .unique_key()
+                        .check(Expr::col(DatabaseSticker::StickerId).gt(0)),
+                )
+                .col(ColumnDef::new(DatabaseSticker::GuildId).big_integer().check(Expr::col(DatabaseSticker::GuildId).gt(0)))
+                .build(PostgresQueryBuilder);
+
+            sqlx::query(&sql).execute(&mut *connection).await?;
+
+            let sql = Table::create()
+                .if_not_exists()
+                .table(DatabaseSoundsticker::Table)
+                .col(ColumnDef::new(DatabaseSoundsticker::Id).uuid().default(PgFunc::gen_random_uuid()).primary_key())
+                .col(
+                    ColumnDef::new(DatabaseSoundsticker::StickerId)
+                        .uuid()
+                        .not_null()
+                        .unique_key()
+                )
+                .col(ColumnDef::new(DatabaseSoundsticker::SoundId).uuid().not_null())
+                .foreign_key(
+                    ForeignKey::create()
+                        .from(DatabaseSoundsticker::Table, DatabaseSoundsticker::StickerId)
+                        .to(DatabaseSticker::Table, DatabaseSticker::Id)
+                        .on_delete(ForeignKeyAction::Cascade),
+                )
+                .foreign_key(
+                    ForeignKey::create()
+                        .from(DatabaseSoundsticker::Table, DatabaseSoundsticker::SoundId)
+                        .to(DatabaseSound::Table, DatabaseSound::Id)
+                        .on_delete(ForeignKeyAction::Cascade),
                 )
                 .build(PostgresQueryBuilder);
 
@@ -51,7 +91,9 @@ impl Operation<Postgres> for CreateTableOperation {
     {
         Box::pin(async {
             let sql = Table::drop()
-                .table(DatabaseSoundticker::Table)
+                .table(DatabaseSoundsticker::Table)
+                .table(DatabaseSticker::Table)
+                .table(DatabaseSound::Table)
                 .build(PostgresQueryBuilder);
 
             sqlx::query(&sql).execute(&mut *connection).await?;
@@ -71,9 +113,27 @@ impl Operation<Postgres> for CreateIndexOperation {
         Box::pin(async {
             let sql = Index::create()
                 .if_not_exists()
+                .name("sounds_sound_id_idx")
+                .table(DatabaseSoundsticker::Table)
+                .col(DatabaseSoundsticker::StickerId)
+                .build(PostgresQueryBuilder);
+
+            sqlx::query(&sql).execute(&mut *connection).await?;
+
+            let sql = Index::create()
+                .if_not_exists()
+                .name("stickers_sticker_id_idx")
+                .table(DatabaseSoundsticker::Table)
+                .col(DatabaseSoundsticker::StickerId)
+                .build(PostgresQueryBuilder);
+
+            sqlx::query(&sql).execute(&mut *connection).await?;
+
+            let sql = Index::create()
+                .if_not_exists()
                 .name("soundstickers_sticker_id_idx")
-                .table(DatabaseSoundticker::Table)
-                .col(DatabaseSoundticker::StickerId)
+                .table(DatabaseSoundsticker::Table)
+                .col(DatabaseSoundsticker::StickerId)
                 .build(PostgresQueryBuilder);
 
             sqlx::query(&sql).execute(&mut *connection).await?;
@@ -89,6 +149,18 @@ impl Operation<Postgres> for CreateIndexOperation {
         'b: 'async_trait,
     {
         Box::pin(async {
+            let sql = Index::drop()
+                .name("sounds_sound_id_idx")
+                .build(PostgresQueryBuilder);
+
+            sqlx::query(&sql).execute(&mut *connection).await?;
+
+            let sql = Index::drop()
+                .name("stickers_sticker_id_idx")
+                .build(PostgresQueryBuilder);
+
+            sqlx::query(&sql).execute(&mut *connection).await?;
+
             let sql = Index::drop()
                 .name("soundstickers_sticker_id_idx")
                 .build(PostgresQueryBuilder);
@@ -107,7 +179,7 @@ impl Migration<Postgres> for V2Migration {
     }
 
     fn name(&self) -> &str {
-        "create soundstickers table"
+        "create soundstickers"
     }
 
     fn parents(&self) -> Vec<Box<dyn Migration<Postgres>>> {

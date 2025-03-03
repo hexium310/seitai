@@ -10,9 +10,10 @@ use serenity::{
     utils::{content_safe, ContentSafeOptions},
 };
 use songbird::Songbird;
+use soundboard::sound::SoundId;
 use voicevox::Voicevox;
 
-use crate::{regex, VoicevoxClient};
+use crate::{regex::{self, SOUNDMOJI}, VoicevoxClient};
 
 pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
     songbird::get(context)
@@ -23,6 +24,20 @@ pub(crate) async fn get_manager(context: &Context) -> Result<Arc<Songbird>> {
 pub(crate) fn get_guild(context: &Context, interaction: &CommandInteraction) -> Option<Guild> {
     let guild_id = interaction.guild_id?;
     guild_id.to_guild_cached(&context.cache).map(|guild| guild.to_owned())
+}
+
+pub(crate) fn parse_soundmoji(value: impl AsRef<str>) -> Result<(Option<SoundId>, Option<GuildId>)> {
+    let value = value.as_ref();
+
+    match SOUNDMOJI.captures(value) {
+        Some(caps) => {
+            let sound_id = caps.name("sound_id").map(|m| m.as_str().parse::<u64>()).transpose()?;
+            let guild_id = caps.name("guild_id").map(|m| m.as_str().parse::<u64>()).transpose()?;
+
+            Ok((sound_id.map(SoundId::new), guild_id.map(GuildId::new)))
+        },
+        None => Ok((None, None)),
+    }
 }
 
 pub(crate) async fn respond(
