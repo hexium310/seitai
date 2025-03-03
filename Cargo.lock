@@ -2962,6 +2962,7 @@ name = "seitai"
 version = "0.1.24"
 dependencies = [
  "anyhow",
+ "clap",
  "database",
  "futures",
  "hashbrown 0.15.2",

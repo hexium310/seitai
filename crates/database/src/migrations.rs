@@ -1,8 +1,9 @@
 use std::ops::Deref;
 
 use sqlx::Postgres;
-pub use sqlx_migrator::migrator::{Migrate, Plan};
 use sqlx_migrator::{Info, migrator, vec_box};
+
+pub use sqlx_migrator::MigrationCommand;
 
 pub mod v1_users_and_speakers;
 pub mod v2_soundstickers;
@@ -34,5 +35,9 @@ impl Migrator {
         ));
 
         Self { inner: migrator }
+    }
+
+    pub fn into_boxed_inner(self) -> Box<migrator::Migrator<Postgres>> {
+        Box::new(self.inner)
     }
 }
