@@ -1,13 +1,8 @@
 use std::{env, process::exit, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Error, Result};
-use database::{
-    ConnectOptions,
-    PgConnectOptions,
-    PgPool,
-    PgPoolOptions,
-    migrations::{Migrate, Migrator, Plan},
-};
+use cli::Application;
+use database::{ConnectOptions, PgConnectOptions, PgPool, PgPoolOptions};
 use futures::lock::Mutex;
 use hashbrown::HashMap;
 use time_keepr::TimeKeeper;
@@ -25,11 +20,12 @@ use crate::{
 
 mod audio;
 mod character_converter;
+mod cli;
 mod commands;
 mod event_handler;
-mod time_keepr;
 mod regex;
 mod speaker;
+mod time_keepr;
 mod utils;
 
 struct VoicevoxClient;
@@ -42,6 +38,13 @@ impl TypeMapKey for VoicevoxClient {
 async fn main() {
     initialize_logging();
 
+    if let Err(err) = Application::start().await {
+        tracing::error!("failed to start application\nError: {err:?}");
+        exit(1);
+    };
+}
+
+pub async fn start_bot() {
     let token = match env::var("DISCORD_TOKEN") {
         Ok(token) => token,
         Err(error) => {
@@ -74,22 +77,6 @@ async fn main() {
         Err(error) => {
             tracing::error!("failed to set up postgres\nError: {error:?}");
             exit(1);
-        },
-    };
-
-    // TODO: implement CLI
-    match pool.acquire().await {
-        Ok(mut connection) => {
-            let migrator = Migrator::new();
-            match migrator.run(&mut *connection, &Plan::apply_all()).await {
-                Ok(_) => (),
-                Err(err) => {
-                    tracing::error!("failed to migration\nError: {err:?}");
-                },
-            };
-        },
-        Err(err) => {
-            tracing::error!("failed to acquire database connection for migration\nError: {err:?}");
         },
     };
 
@@ -161,7 +148,7 @@ async fn main() {
     }
 }
 
-async fn set_up_database() -> Result<PgPool> {
+pub async fn set_up_database() -> Result<PgPool> {
     let pg_options = PgConnectOptions::new()
         .log_statements(LevelFilter::Debug)
         .log_slow_statements(LevelFilter::Warn, Duration::from_millis(500));
@@ -171,7 +158,7 @@ async fn set_up_database() -> Result<PgPool> {
         .acquire_timeout(Duration::from_secs(5))
         .connect_with(pg_options)
         .await
-        .map_err(Error::msg)
+        .context("failed to set up database")
 }
 
 async fn set_up_voicevox() -> Result<Voicevox> {
