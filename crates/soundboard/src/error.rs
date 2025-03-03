@@ -13,6 +13,6 @@ pub enum SoundboardError {
     #[error("failed to request: {0}")]
     RequestError(#[source] reqwest::Error),
 
-    #[error("")]
+    #[error("failed to request")]
     UnsuccessfulRequest(DiscordJsonError),
 }
