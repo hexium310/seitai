@@ -206,14 +206,17 @@ where
 
                 for soundsticker in soundstickers {
                     let sound_id = SoundId::new(soundsticker.sound_id);
-                    let mut last_sent = self.time_keeper.lock().await;
+                    let sound_guild_id = soundsticker.sound_guild_id.map(GuildId::new).or(Some(guild_id));
 
-                    if last_sent.is_elapsed(&(guild_id, sound_id), Duration::from_secs(10)) {
+                    let mut last_sent = self.time_keeper.lock().await;
+                    // guild_id in params of last_sent is where bot sent sound, not where sound is registered.
+                    let key = (guild_id, sound_id);
+                    if last_sent.is_elapsed(&key, Duration::from_secs(10)) {
                         continue;
                     }
 
-                    match sound_id.send(&context.http, channel_id_bot_at, Some(guild_id)).await {
-                        Ok(_) => last_sent.record((guild_id, sound_id)),
+                    match sound_id.send(&context.http, channel_id_bot_at, sound_guild_id).await {
+                        Ok(_) => last_sent.record(key),
                         Err(err) => {
                             tracing::error!("failed to send soundboard sound {sound_id:?}\nError: {err:?}");
                             continue;
