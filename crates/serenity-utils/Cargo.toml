@@ -1,0 +1,10 @@
+[package]
+name = "serenity_utils"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies.serenity]
+workspace = true
+
+[dependencies.tracing]
+workspace = true

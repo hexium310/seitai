@@ -1,5 +1,5 @@
 pub use client::Client;
 
-pub mod event_handler;
-pub mod client;
-pub mod restarter;
+mod event_handler;
+mod client;
+mod restarter;

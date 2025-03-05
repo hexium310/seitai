@@ -6,7 +6,6 @@ use serenity::{
     client::{Context, EventHandler},
     model::gateway::Ready,
 };
-use tokio::sync::Notify;
 use tracing::instrument;
 
 use crate::{event_handler, restarter::Restarter};
@@ -14,10 +13,9 @@ use crate::{event_handler, restarter::Restarter};
 mod ready;
 mod voice_state_update;
 
-pub struct Handler {
-    pub connected_channels: Arc<Mutex<HashMap<GuildId, ChannelId>>>,
-    pub abort_controller: Arc<Notify>,
-    pub restarter: Restarter,
+pub(crate) struct Handler {
+    pub(crate) connected_channels: Arc<Mutex<HashMap<GuildId, ChannelId>>>,
+    pub(crate) restarter: Restarter,
 }
 
 impl EventHandler for Handler {

@@ -1,5 +1,13 @@
 [workspace]
-members = ["crates/database", "crates/logging", "crates/restarter", "crates/soundboard", "crates/voicevox", "seitai"]
+members = [
+  "crates/database",
+  "crates/logging",
+  "crates/restarter",
+  "crates/serenity-utils",
+  "crates/soundboard",
+  "crates/voicevox",
+  "seitai",
+]
 default-members = ["seitai"]
 resolver = "3"
 
@@ -25,6 +33,9 @@ features = ["client", "client-legacy", "http1", "tokio"]
 [workspace.dependencies.logging]
 path = "crates/logging"
 
+[workspace.dependencies.restarter]
+path = "crates/restarter"
+
 [workspace.dependencies.serde]
 version = "1.0.218"
 features = ["derive"]
@@ -35,6 +46,9 @@ version = "1.0.139"
 [workspace.dependencies.serenity]
 version = "0.12.4"
 default-features = false
+
+[workspace.dependencies.serenity_utils]
+path = "crates/serenity-utils"
 
 [workspace.dependencies.tokio]
 version = "1.43.0"

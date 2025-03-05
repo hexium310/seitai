@@ -7,7 +7,7 @@ use tokio::sync::Notify;
 use tracing::Instrument;
 
 #[derive(Debug, Clone)]
-pub struct Restarter;
+pub(crate) struct Restarter;
 
 impl Restarter {
     pub(crate) fn new() -> Self {

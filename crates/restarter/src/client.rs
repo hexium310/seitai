@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 use futures::lock::Mutex;
 use serenity::{all::GatewayIntents, Client as SerenityClient};
-use tokio::{signal::unix::{self, SignalKind}, sync::Notify, task::JoinHandle};
+use tokio::{signal::unix::{self, SignalKind}, task::JoinHandle};
 
 use crate::{event_handler::Handler, restarter::Restarter};
 
@@ -18,7 +18,6 @@ impl Client {
         let mut client = SerenityClient::builder(token, intents)
             .event_handler(Handler {
                 connected_channels: Arc::new(Mutex::new(HashMap::new())),
-                abort_controller: Arc::new(Notify::default()),
                 restarter: Restarter::new(),
             })
             .await?;
