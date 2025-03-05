@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use anyhow::Result;
 use serenity::all::{Context, VoiceState};
 use serenity_utils::voice_state::{VoiceStateAction, VoiceStateConnection};
@@ -26,7 +24,6 @@ pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<Vo
                 .await
                 .insert(guild_id, channel_id);
 
-            dbg!(&handler.connected_channels.lock().await);
             handler.restarter.abort();
         },
         VoiceStateConnection::Left => {
@@ -34,7 +31,7 @@ pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<Vo
             connected_channels.remove(&guild_id);
 
             if connected_channels.is_empty() {
-                handler.restarter.wait(Duration::from_secs(300));
+                handler.restarter.wait();
             }
         },
         VoiceStateConnection::NoAction => (),

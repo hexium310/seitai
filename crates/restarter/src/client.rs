@@ -11,14 +11,14 @@ pub struct Client;
 
 impl Client {
     #[tracing::instrument(skip_all)]
-    pub async fn start(token: String) -> Result<()> {
+    pub async fn start(token: String, restart_interval: u64) -> Result<()> {
         enable_graceful_shutdown();
 
         let intents = GatewayIntents::GUILD_VOICE_STATES;
         let mut client = SerenityClient::builder(token, intents)
             .event_handler(Handler {
                 connected_channels: Arc::new(Mutex::new(HashMap::new())),
-                restarter: Restarter::new(),
+                restarter: Restarter::new(restart_interval),
             })
             .await?;
 

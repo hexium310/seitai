@@ -7,11 +7,13 @@ use tokio::sync::Notify;
 use tracing::Instrument;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Restarter;
+pub(crate) struct Restarter {
+    interval: u64,
+}
 
 impl Restarter {
-    pub(crate) fn new() -> Self {
-        Self
+    pub(crate) fn new(interval: u64) -> Self {
+        Self { interval }
     }
 
     #[tracing::instrument]
@@ -34,13 +36,15 @@ impl Restarter {
     }
 
     #[tracing::instrument(skip_all)]
-    pub(crate) fn wait(&self, duration: Duration) {
+    pub(crate) fn wait(&self) {
+        let interval = Duration::from_secs(self.interval);
+
         tokio::spawn(async move {
             // Resets notify waiters because notified() is immediately received notify by notify_one() called before starting waiting.
             let notify = Notify::new();
 
             tokio::select! {
-                _   = tokio::time::sleep(duration) => {
+                _   = tokio::time::sleep(interval) => {
                     if let Err(err) = Self::restart().await {
                         tracing::error!("failed to restart statefulsets/voicevox\nError: {err:?}");
                     }
