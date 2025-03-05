@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies.clap]
 version = "4.5.31"
-features = ["derive"]
+features = ["derive", "env"]
 
 [dependencies.database]
 path = "../crates/database"

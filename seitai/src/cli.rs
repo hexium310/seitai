@@ -1,10 +1,11 @@
-use std::{env, process::exit};
-
 use anyhow::Result;
 use clap::{error::ErrorKind, Parser};
-use database::migrations::{MigrationCommand, Migrator};
+use subcommands::Subcommand;
 
-use crate::{set_up_database, start_bot};
+use crate::start_bot;
+
+mod args;
+mod subcommands;
 
 pub struct Application;
 
@@ -16,12 +17,6 @@ pub struct Cli {
     subcommand: Subcommand,
 }
 
-#[derive(clap::Subcommand)]
-enum Subcommand {
-    Migration(MigrationCommand),
-    Restarter,
-}
-
 impl Application {
     pub async fn start() -> Result<()> {
         let cli = match Cli::try_parse() {
@@ -31,28 +26,14 @@ impl Application {
                 return Ok(());
             },
             Err(help) => {
-                println!("{help}");
+                help.print()?;
                 return Ok(());
             },
         };
 
         match cli.subcommand {
-            Subcommand::Migration(migration) => {
-                let migrator = Migrator::new();
-                let pgpool = set_up_database().await?;
-                migration.run(&mut *pgpool.acquire().await?, migrator.into_boxed_inner()).await?;
-            },
-            Subcommand::Restarter => {
-                let token = match env::var("DISCORD_TOKEN") {
-                    Ok(token) => token,
-                    Err(error) => {
-                        tracing::error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
-                        exit(1);
-                    },
-                };
-
-                restarter::Client::start(token).await?;
-            },
+            Subcommand::Migration(migration) => migration.run().await?,
+            Subcommand::Restarter(restarter) => restarter.run().await?,
         }
 
         Ok(())
