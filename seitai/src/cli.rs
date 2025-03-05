@@ -1,4 +1,4 @@
-use std::process;
+use std::{env, process::exit};
 
 use anyhow::Result;
 use clap::{error::ErrorKind, Parser};
@@ -18,7 +18,8 @@ pub struct Cli {
 
 #[derive(clap::Subcommand)]
 enum Subcommand {
-    Migration(MigrationCommand)
+    Migration(MigrationCommand),
+    Restarter,
 }
 
 impl Application {
@@ -35,13 +36,23 @@ impl Application {
             },
         };
 
-        let migrator = Migrator::new();
-        let pgpool = set_up_database().await?;
+        match cli.subcommand {
+            Subcommand::Migration(migration) => {
+                let migrator = Migrator::new();
+                let pgpool = set_up_database().await?;
+                migration.run(&mut *pgpool.acquire().await?, migrator.into_boxed_inner()).await?;
+            },
+            Subcommand::Restarter => {
+                let token = match env::var("DISCORD_TOKEN") {
+                    Ok(token) => token,
+                    Err(error) => {
+                        tracing::error!("failed to fetch environment variable DISCORD_TOKEN\nError: {error:?}");
+                        exit(1);
+                    },
+                };
 
-        #[allow(irrefutable_let_patterns)]
-        if let Subcommand::Migration(migration) = cli.subcommand {
-            migration.run(&mut *pgpool.acquire().await?, migrator.into_boxed_inner()).await?;
-            process::exit(0);
+                restarter::Client::start(token).await?;
+            },
         }
 
         Ok(())

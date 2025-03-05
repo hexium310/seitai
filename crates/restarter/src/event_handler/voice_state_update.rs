@@ -1,0 +1,87 @@
+use std::time::Duration;
+
+use anyhow::Result;
+use serenity::all::{ChannelId, Context, UserId, VoiceState};
+
+use super::Handler;
+
+pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<VoiceState>, new_state: VoiceState) -> Result<()> {
+    let Some(guild_id) = new_state.guild_id else {
+        return Ok(());
+    };
+
+    let bot_id = ctx.http.get_current_user().await?.id;
+    let action = VoiceStateAction::new(old_state, new_state);
+
+    if !action.is_bot_action(bot_id) {
+        return Ok(());
+    }
+
+    match action.connection() {
+        VoiceStateConnection::Joined(channel_id) => {
+            handler
+                .connected_channels
+                .lock()
+                .await
+                .insert(guild_id, channel_id);
+
+            dbg!(&handler.connected_channels.lock().await);
+            handler.restarter.abort();
+        },
+        VoiceStateConnection::Left => {
+            let mut connected_channels = handler.connected_channels.lock().await;
+            connected_channels.remove(&guild_id);
+
+            if connected_channels.is_empty() {
+                handler.restarter.wait(Duration::from_secs(300));
+            }
+        },
+        VoiceStateConnection::NoAction => (),
+    }
+
+    Ok(())
+}
+
+#[derive(Debug)]
+struct VoiceStateAction {
+    old_state: Option<VoiceState>,
+    new_state: VoiceState,
+}
+
+#[allow(dead_code)]
+enum VoiceStateConnection {
+    // including moved
+    Joined(ChannelId),
+    Left,
+    NoAction,
+}
+
+impl VoiceStateAction {
+    fn new(old_state: Option<VoiceState>, new_state: VoiceState) -> Self {
+        Self {
+            old_state,
+            new_state,
+        }
+    }
+
+    fn connection(&self) -> VoiceStateConnection {
+        if self.old_state.is_some() {
+            return VoiceStateConnection::NoAction;
+        }
+
+        match self.new_state.channel_id {
+            Some(channel_id) => {
+                tracing::debug!("joined voice channel {channel_id}");
+                VoiceStateConnection::Joined(channel_id)
+            },
+            None => {
+                tracing::debug!("left voice channel");
+                VoiceStateConnection::Left
+            },
+        }
+    }
+
+    fn is_bot_action(&self, bot_id: UserId) -> bool {
+        self.new_state.user_id == bot_id
+    }
+}
