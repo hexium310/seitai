@@ -141,10 +141,8 @@ pub(crate) async fn autocomplete(context: &Context, interaction: &CommandInterac
     if let CommandDataOptionValue::Autocomplete { value, .. } = &speaker_id {
         let choices = speaker
             .pairs()
-            .filter_map(|(name_pairs, id)| {
-                name_pairs.contains(value).then_some(Some(AutocompleteChoice::new(format!("{name_pairs}"), id)))
-            })
-            .flatten()
+            .filter(|(name_pairs, _)| name_pairs.contains(value))
+            .map(|(name_pairs, id)| AutocompleteChoice::new(name_pairs.to_string(), id))
             .take(25)
             .collect::<Vec<_>>();
         let autocomplete =

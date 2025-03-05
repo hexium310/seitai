@@ -191,13 +191,8 @@ pub(crate) async fn autocomplete(context: &Context, interaction: &CommandInterac
 fn sticker_autocomplete(stickers: &[Sticker], value: &str) -> CreateInteractionResponse {
     let choices = stickers
         .iter()
-        .filter_map(|sticker| {
-            sticker
-                .name
-                .contains(value)
-                .then_some(Some(AutocompleteChoice::new(sticker.name.clone(), sticker.id.to_string())))
-        })
-        .flatten()
+        .filter(|&sticker| sticker.name.to_lowercase().contains(&value.to_lowercase()))
+        .map(|sticker| AutocompleteChoice::new(sticker.name.clone(), sticker.id.to_string()))
         .take(25)
         .collect::<Vec<_>>();
 
@@ -208,13 +203,8 @@ fn soundboard_autocomplete(soundboard: Soundboard, value: &str) -> CreateInterac
     let choices = soundboard
         .items
         .iter()
-        .filter_map(|sound| {
-            sound
-                .name
-                .contains(value)
-                .then_some(Some(AutocompleteChoice::new(sound.name.clone(), sound.sound_id.get().to_string())))
-        })
-        .flatten()
+        .filter(|&sound| sound.name.to_lowercase().contains(&value.to_lowercase()))
+        .map(|sound| AutocompleteChoice::new(sound.name.clone(), sound.sound_id.get().to_string()))
         .take(25)
         .collect::<Vec<_>>();
 
