@@ -22,9 +22,6 @@ services:
       - type: bind
         source: seitai
         target: /usr/src/myapp/seitai
-      - type: bind
-        source: restarter
-        target: /usr/src/myapp/restarter
     command: /bin/sh -c 'cargo run -p seitai'
     environment:
       DISCORD_TOKEN:
@@ -53,10 +50,7 @@ services:
       - type: bind
         source: seitai
         target: /usr/src/myapp/seitai
-      - type: bind
-        source: restarter
-        target: /usr/src/myapp/restarter
-    command: /bin/sh -c 'cargo run -p restarter'
+    command: /bin/sh -c 'cargo run -- restarter'
     environment:
       DISCORD_TOKEN:
 
