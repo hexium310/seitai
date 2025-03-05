@@ -1,17 +1,9 @@
 group "default" {
-  targets = ["restarter", "seitai"]
+  targets = ["seitai"]
 }
 
 variable "VERSION" {
   default = "latest"
-}
-
-target "restarter" {
-  target = "restarter"
-  tags = [
-    "ghcr.io/hexium310/restarter:latest",
-    "ghcr.io/hexium310/restarter:${VERSION}",
-  ]
 }
 
 target "seitai" {

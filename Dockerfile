@@ -13,27 +13,12 @@ FROM runtime AS development
 
 FROM runtime AS builder
 RUN --mount=type=bind,source=crates,target=crates \
-    --mount=type=bind,source=restarter,target=restarter \
     --mount=type=bind,source=seitai,target=seitai \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
     --mount=type=cache,target=/usr/src/myapp/target \
     cargo build --release --workspace \
-    && cp target/release/restarter /restarter \
     && cp target/release/seitai /seitai
-
-FROM scratch AS restarter
-LABEL io.github.hexium310.seitai.app=restarter
-LABEL org.opencontainers.image.source=https://github.com/hexium310/seitai
-COPY --from=runtime /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=runtime /lib/x86_64-linux-gnu/libc.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libcrypto.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libgcc_s.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libm.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libssl.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib64/ld-linux-x86-64.so* /lib64/
-COPY --from=builder /restarter /
-CMD ["/restarter"]
 
 FROM scratch AS seitai
 LABEL io.github.hexium310.seitai.app=seitai

@@ -8,13 +8,13 @@ workspace = true
 
 [dependencies.clap]
 version = "4.5.31"
-features = ["derive"]
+features = ["derive", "env"]
 
 [dependencies.database]
 path = "../crates/database"
 
 [dependencies.futures]
-version = "0.3.31"
+workspace = true
 
 [dependencies.hashbrown]
 version = "0.15.2"
@@ -44,6 +44,9 @@ version = "5.0.0"
 
 [dependencies.regex-lite]
 version = "0.1.6"
+
+[dependencies.restarter]
+workspace = true
 
 [dependencies.serde]
 workspace = true

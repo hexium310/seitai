@@ -16,8 +16,9 @@ spec:
         - name: seitai-migration
           image: ghcr.io/hexium310/seitai
           imagePullPolicy: Always
-          args:
+          command:
             - /seitai
+          args:
             - migration
             - apply
           env:
@@ -64,8 +65,12 @@ spec:
                   name: seitai.seitai-database.credentials.postgresql.acid.zalan.do
                   key: password
         - name: restarter
-          image: ghcr.io/hexium310/restarter
+          image: ghcr.io/hexium310/seitai
           imagePullPolicy: Always
+          command:
+            - /seitai
+          args:
+            - restarter
           env:
             - name: NO_COLOR
               value: '1'
