@@ -7,9 +7,9 @@ pub struct VoiceStateAction {
 }
 
 pub enum VoiceStateConnection {
-    // including moved
     Joined(ChannelId),
-    Left,
+    Left(ChannelId),
+    Moved(ChannelId, ChannelId),
     NoAction,
 }
 
@@ -22,18 +22,24 @@ impl VoiceStateAction {
     }
 
     pub fn connection(&self) -> VoiceStateConnection {
-        if self.old_state.is_some() {
-            return VoiceStateConnection::NoAction;
-        }
-
-        match self.new_state.channel_id {
-            Some(channel_id) => {
-                tracing::debug!("joined voice channel {channel_id}");
-                VoiceStateConnection::Joined(channel_id)
+        match &self.old_state {
+            Some(old_state) => match (old_state.channel_id, self.new_state.channel_id) {
+                (Some(old_channel_id), Some(new_channel_id)) if old_channel_id != new_channel_id => {
+                    tracing::debug!("moved voice channel from {old_channel_id} to {new_channel_id}");
+                    VoiceStateConnection::Moved(old_channel_id, new_channel_id)
+                },
+                (Some(channel_id), None) => {
+                    tracing::debug!("left voice channel from {channel_id}");
+                    VoiceStateConnection::Left(channel_id)
+                },
+                _ => VoiceStateConnection::NoAction,
             },
-            None => {
-                tracing::debug!("left voice channel");
-                VoiceStateConnection::Left
+            None => match self.new_state.channel_id {
+                Some(channel_id) => {
+                    tracing::debug!("joined voice channel to {channel_id}");
+                    VoiceStateConnection::Joined(channel_id)
+                },
+                None => VoiceStateConnection::NoAction,
             },
         }
     }

@@ -26,7 +26,7 @@ pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<Vo
 
             handler.restarter.abort();
         },
-        VoiceStateConnection::Left => {
+        VoiceStateConnection::Left(_) => {
             let mut connected_channels = handler.connected_channels.lock().await;
             connected_channels.remove(&guild_id);
 
@@ -34,7 +34,7 @@ pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<Vo
                 handler.restarter.wait();
             }
         },
-        VoiceStateConnection::NoAction => (),
+        VoiceStateConnection::Moved(..) | VoiceStateConnection::NoAction => (),
     }
 
     Ok(())

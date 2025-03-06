@@ -14,7 +14,7 @@ impl Client {
     pub async fn start(token: String, restart_interval: u64) -> Result<()> {
         enable_graceful_shutdown();
 
-        let intents = GatewayIntents::GUILD_VOICE_STATES;
+        let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES;
         let mut client = SerenityClient::builder(token, intents)
             .event_handler(Handler {
                 connected_channels: Arc::new(Mutex::new(HashMap::new())),
