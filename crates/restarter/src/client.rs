@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use futures::lock::Mutex;
@@ -11,18 +11,18 @@ pub struct Client;
 
 impl Client {
     #[tracing::instrument(skip_all)]
-    pub async fn start(token: String, restart_interval: u64) -> Result<()> {
+    pub async fn start(token: String, restart_duration: u64) -> Result<()> {
         enable_graceful_shutdown();
 
         let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES;
         let mut client = SerenityClient::builder(token, intents)
             .event_handler(Handler {
                 connected_channels: Arc::new(Mutex::new(HashMap::new())),
-                restarter: Restarter::new(restart_interval),
+                restarter: Restarter::new(Duration::from_secs(restart_duration)),
             })
             .await?;
 
-        tracing::debug!("seitai client starts");
+        tracing::debug!("restarter client starts");
         if let Err(err) = client.start().await {
             tracing::error!("failed to start client\nError: {err:?}");
             return Err(err.into());

@@ -2628,6 +2628,7 @@ dependencies = [
  "serenity",
  "serenity_utils",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 

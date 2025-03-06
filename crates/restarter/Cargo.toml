@@ -6,6 +6,9 @@ edition = "2024"
 [lib]
 doctest = false
 
+[dependencies]
+tokio-util = "0.7.13"
+
 [dependencies.anyhow]
 workspace = true
 

@@ -1,19 +1,31 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
+use futures::lock::Mutex;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::{Api, Client, Config};
-use tokio::sync::Notify;
+use tokio::sync::mpsc::{self, error::SendError, Receiver, Sender};
+use tokio_util::sync::CancellationToken;
 use tracing::Instrument;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Restarter {
-    interval: u64,
+    duration: Duration,
+    waiting: bool,
+    tx: Sender<usize>,
+    rx: Arc<Mutex<Receiver<usize>>>,
 }
 
 impl Restarter {
-    pub(crate) fn new(interval: u64) -> Self {
-        Self { interval }
+    pub(crate) fn new(duration: Duration) -> Self {
+        let (tx, rx) = mpsc::channel(1);
+
+        Self {
+            duration,
+            waiting: false,
+            tx,
+            rx: Arc::new(Mutex::new(rx)),
+        }
     }
 
     #[tracing::instrument]
@@ -36,27 +48,49 @@ impl Restarter {
     }
 
     #[tracing::instrument(skip_all)]
-    pub(crate) fn wait(&self) {
-        let interval = Duration::from_secs(self.interval);
+    pub(crate) async fn wait(&self) {
+        let duration = self.duration;
+        let rx = self.rx.clone();
+        let mut waiting = self.waiting;
+        let cancellation_token = CancellationToken::new();
 
         tokio::spawn(async move {
-            // Resets notify waiters because notified() is immediately received notify by notify_one() called before starting waiting.
-            let notify = Notify::new();
+            let mut rx = rx.lock().await;
 
-            tokio::select! {
-                _   = tokio::time::sleep(interval) => {
-                    if let Err(err) = Self::restart().await {
-                        tracing::error!("failed to restart statefulsets/voicevox\nError: {err:?}");
-                    }
-                },
-                _ = notify.notified() => {
-                    tracing::info!("canceled waiting for restarting statefulsets/voicevox");
-                },
+            while let Some(connection_count) = rx.recv().await {
+                match (connection_count, waiting) {
+                    (0, false) => {
+                        waiting = true;
+                        let cancellation_token = cancellation_token.clone();
+
+                        tracing::info!("statefulsets/voicevox is going to restart in {} secs", duration.as_secs());
+
+                        tokio::spawn(async move {
+                            tokio::select! {
+                                _ = cancellation_token.cancelled() => {
+                                    tracing::info!("cancelled restarting statefulsets/voicevox");
+                                },
+                                _ = tokio::time::sleep(duration) => {
+                                    if let Err(err) = Self::restart().await {
+                                        tracing::error!("failed to restart statefulsets/voicevox\nError: {err:?}");
+                                    }
+                                },
+                            }
+                        });
+                    },
+                    (1.., true) => {
+                        waiting = false;
+                        cancellation_token.cancel();
+                    },
+                    (connection_count, waiting) => {
+                        tracing::error!("unexpected connection count {connection_count} and waiting {waiting}");
+                    },
+                }
             }
         }.in_current_span());
     }
 
-    pub(crate) fn abort(&self) {
-        Notify::new().notify_one();
+    pub(crate) async fn send(&self, count: usize) -> Result<(), SendError<usize>> {
+        self.tx.send(count).await
     }
 }
