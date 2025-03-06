@@ -5,7 +5,7 @@ use futures::lock::Mutex;
 use serenity::{all::GatewayIntents, Client as SerenityClient};
 use tokio::{signal::unix::{self, SignalKind}, task::JoinHandle};
 
-use crate::{event_handler::Handler, restarter::Restarter};
+use crate::{event_handler::Handler, restarter::{KubeRestarter, Restarter}};
 
 pub struct Client;
 
@@ -18,7 +18,7 @@ impl Client {
         let mut client = SerenityClient::builder(token, intents)
             .event_handler(Handler {
                 connected_channels: Arc::new(Mutex::new(HashMap::new())),
-                restarter: Restarter::new(Duration::from_secs(restart_duration)),
+                restarter: Restarter::new(Duration::from_secs(restart_duration), KubeRestarter),
             })
             .await?;
 

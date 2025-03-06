@@ -9,27 +9,24 @@ use tokio_util::sync::CancellationToken;
 use tracing::Instrument;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Restarter {
+pub(crate) struct Restarter<Restart = KubeRestarter> {
     duration: Duration,
     waiting: bool,
     tx: Sender<usize>,
     rx: Arc<Mutex<Receiver<usize>>>,
+    restart: Restart,
 }
 
-impl Restarter {
-    pub(crate) fn new(duration: Duration) -> Self {
-        let (tx, rx) = mpsc::channel(1);
+#[derive(Debug, Clone)]
+pub(crate) struct KubeRestarter;
 
-        Self {
-            duration,
-            waiting: false,
-            tx,
-            rx: Arc::new(Mutex::new(rx)),
-        }
-    }
+pub(crate) trait Restart: Send {
+    fn restart(&self) -> impl Future<Output = Result<()>> + Send;
+}
 
+impl Restart for KubeRestarter {
     #[tracing::instrument]
-    pub(crate) async fn restart() -> Result<()> {
+    async fn restart(&self) -> Result<()> {
         let config = match Config::incluster() {
             Ok(config) => config,
             Err(_) => {
@@ -46,11 +43,26 @@ impl Restarter {
 
         Ok(())
     }
+}
+
+impl<Restart: self::Restart + Clone + Send + 'static> Restarter<Restart> {
+    pub(crate) fn new(duration: Duration, restart: Restart) -> Self {
+        let (tx, rx) = mpsc::channel(1);
+
+        Self {
+            duration,
+            waiting: false,
+            tx,
+            rx: Arc::new(Mutex::new(rx)),
+            restart,
+        }
+    }
 
     #[tracing::instrument(skip_all)]
     pub(crate) async fn wait(&self) {
         let duration = self.duration;
         let rx = self.rx.clone();
+        let restart = self.restart.clone();
         let mut waiting = self.waiting;
         let cancellation_token = CancellationToken::new();
 
@@ -59,9 +71,13 @@ impl Restarter {
 
             while let Some(connection_count) = rx.recv().await {
                 match (connection_count, waiting) {
+                    (0, true) => {
+                        tracing::error!("unexpected connection count {connection_count} and waiting {waiting}");
+                    },
                     (0, false) => {
                         waiting = true;
                         let cancellation_token = cancellation_token.clone();
+                        let restart = restart.clone();
 
                         tracing::info!("statefulsets/voicevox is going to restart in {} secs", duration.as_secs());
 
@@ -71,7 +87,7 @@ impl Restarter {
                                     tracing::info!("cancelled restarting statefulsets/voicevox");
                                 },
                                 _ = tokio::time::sleep(duration) => {
-                                    if let Err(err) = Self::restart().await {
+                                    if let Err(err) = restart.restart().await {
                                         tracing::error!("failed to restart statefulsets/voicevox\nError: {err:?}");
                                     }
                                 },
@@ -82,9 +98,7 @@ impl Restarter {
                         waiting = false;
                         cancellation_token.cancel();
                     },
-                    (connection_count, waiting) => {
-                        tracing::error!("unexpected connection count {connection_count} and waiting {waiting}");
-                    },
+                    (1.., false) => (),
                 }
             }
         }.in_current_span());
