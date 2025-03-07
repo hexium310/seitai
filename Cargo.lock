@@ -2625,10 +2625,10 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "logging",
+ "mockall",
  "serenity",
  "serenity_utils",
  "tokio",
- "tokio-util",
  "tracing",
 ]
 

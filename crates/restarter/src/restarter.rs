@@ -1,9 +1,10 @@
-use std::{sync::Arc, time::Duration};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use futures::lock::Mutex;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::{Api, Client, Config};
+use tokio::{sync::oneshot, task::JoinHandle};
 use tracing::Instrument;
 
 #[derive(Debug, Clone)]
@@ -42,7 +43,7 @@ impl Restart for KubeRestarter {
     }
 }
 
-impl<Restart: self::Restart + Clone + Send + 'static> Restarter<Restart> {
+impl<Restart: self::Restart + Debug + Clone + Send + Sync + 'static> Restarter<Restart> {
     pub(crate) fn new(duration: Duration, restart: Restart) -> Self {
         Self {
             duration,
@@ -52,12 +53,13 @@ impl<Restart: self::Restart + Clone + Send + 'static> Restarter<Restart> {
         }
     }
 
-    #[tracing::instrument(skip_all)]
-    pub(crate) async fn wait(&self) {
+    #[allow(clippy::async_yields_async)]
+    #[tracing::instrument(skip(self), fields(self.duration = ?self.duration, self.restart = ?self.restart))]
+    pub(crate) async fn schedule_restart(&self) -> JoinHandle<()> {
         let waiting = self.waiting.clone();
 
         if *waiting.lock().await {
-            return;
+            return tokio::spawn(async {});
         }
 
         let duration = self.duration;
@@ -66,26 +68,38 @@ impl<Restart: self::Restart + Clone + Send + 'static> Restarter<Restart> {
 
         tracing::info!("statefulsets/voicevox is going to restart in {} secs", duration.as_secs());
 
-        tokio::spawn(async move {
+        let (tx, rx) = oneshot::channel();
+
+        let handle = tokio::spawn(async move {
+            tx.send(()).expect("failed to send notice that timer task spawned");
             *waiting.lock().await = true;
 
             tokio::time::sleep(duration).await;
 
             *waiting.lock().await = false;
 
-            if *connection_count.lock().await != 0 {
-                tracing::info!("cancelled restarting statefulsets/voicevox");
+            {
+                let connection_count = *connection_count.lock().await;
+                if connection_count != 0 {
+                    tracing::info!("statefulsets/voicevox wasn't restart becase {connection_count} clients are connected");
 
-                return;
+                    return;
+                }
             }
 
             if let Err(err) = restart.restart().await {
                 tracing::error!("failed to restart statefulsets/voicevox\nError: {err:?}");
             }
         }.in_current_span());
+
+        rx.await.expect("failed to receive notice that timer task spawned");
+        handle
     }
 
     pub(crate) async fn set_connection_count(&self, count: usize) {
         *self.connection_count.lock().await = count;
     }
 }
+
+#[cfg(test)]
+mod tests;

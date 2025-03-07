@@ -31,7 +31,7 @@ pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<Vo
             handler.restarter.set_connection_count(count).await;
 
             if count == 0 {
-                handler.restarter.wait().await;
+                handler.restarter.schedule_restart().await;
             }
         },
         VoiceStateConnection::Moved(..) | VoiceStateConnection::NoAction => (),
