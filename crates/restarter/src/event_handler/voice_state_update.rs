@@ -21,14 +21,18 @@ pub(crate) async fn handle(handler: &Handler, ctx: Context, old_state: Option<Vo
             let mut connected_channels = handler.connected_channels.lock().await;
             connected_channels.insert(guild_id, channel_id);
 
-            handler.restarter.send(connected_channels.len()).await?;
+            handler.restarter.set_connection_count(connected_channels.len()).await;
         },
         VoiceStateConnection::Left(_) => {
             let mut connected_channels = handler.connected_channels.lock().await;
             connected_channels.remove(&guild_id);
 
-            handler.restarter.send(connected_channels.len()).await?;
+            let count = connected_channels.len();
+            handler.restarter.set_connection_count(count).await;
 
+            if count == 0 {
+                handler.restarter.wait().await;
+            }
         },
         VoiceStateConnection::Moved(..) | VoiceStateConnection::NoAction => (),
     }
