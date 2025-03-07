@@ -3,11 +3,16 @@ name = "restarter"
 version = "0.1.7"
 edition = "2024"
 
+[lib]
+doctest = false
+
+[dependencies]
+
 [dependencies.anyhow]
 workspace = true
 
 [dependencies.futures]
-version = "0.3.31"
+workspace = true
 
 [dependencies.k8s-openapi]
 version = "0.24.0"
@@ -30,3 +35,13 @@ workspace = true
 [dependencies.serenity]
 workspace = true
 features = ["cache", "client", "gateway", "model", "native_tls_backend"]
+
+[dependencies.serenity_utils]
+workspace = true
+
+[dev-dependencies.mockall]
+version = "0.13.1"
+
+[dev-dependencies.tokio]
+workspace = true
+features = ["test-util"]

@@ -2649,7 +2649,9 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "logging",
+ "mockall",
  "serenity",
+ "serenity_utils",
  "tokio",
  "tracing",
 ]
@@ -2905,6 +2907,7 @@ dependencies = [
  "mockall",
  "ordered-float 5.0.0",
  "regex-lite",
+ "restarter",
  "serde",
  "serde_json",
  "serenity",
@@ -3096,6 +3099,14 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+]
+
+[[package]]
+name = "serenity_utils"
+version = "0.1.0"
+dependencies = [
+ "serenity",
+ "tracing",
 ]
 
 [[package]]

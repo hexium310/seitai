@@ -1,10 +1,11 @@
-use std::process;
-
 use anyhow::Result;
 use clap::{error::ErrorKind, Parser};
-use database::migrations::{MigrationCommand, Migrator};
+use subcommands::Subcommand;
 
-use crate::{set_up_database, start_bot};
+use crate::start_bot;
+
+mod args;
+mod subcommands;
 
 pub struct Application;
 
@@ -16,11 +17,6 @@ pub struct Cli {
     subcommand: Subcommand,
 }
 
-#[derive(clap::Subcommand)]
-enum Subcommand {
-    Migration(MigrationCommand)
-}
-
 impl Application {
     pub async fn start() -> Result<()> {
         let cli = match Cli::try_parse() {
@@ -30,18 +26,14 @@ impl Application {
                 return Ok(());
             },
             Err(help) => {
-                println!("{help}");
+                help.print()?;
                 return Ok(());
             },
         };
 
-        let migrator = Migrator::new();
-        let pgpool = set_up_database().await?;
-
-        #[allow(irrefutable_let_patterns)]
-        if let Subcommand::Migration(migration) = cli.subcommand {
-            migration.run(&mut *pgpool.acquire().await?, migrator.into_boxed_inner()).await?;
-            process::exit(0);
+        match cli.subcommand {
+            Subcommand::Migration(migration) => migration.run().await?,
+            Subcommand::Restarter(restarter) => restarter.run().await?,
         }
 
         Ok(())
