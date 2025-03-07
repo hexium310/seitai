@@ -58,7 +58,7 @@ features = ["builder", "cache", "client", "collector", "gateway", "model", "nati
 [dependencies.songbird]
 version = "0.5.0"
 default-features = false
-features = ["builtin-queue", "driver", "gateway", "native", "serenity"]
+features = ["builtin-queue", "driver", "gateway", "native", "serenity", "tungstenite"]
 
 [dependencies.soundboard]
 path = "../crates/soundboard"
