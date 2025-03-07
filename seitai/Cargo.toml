@@ -56,7 +56,7 @@ workspace = true
 features = ["builder", "cache", "client", "collector", "gateway", "model", "native_tls_backend"]
 
 [dependencies.songbird]
-version = "0.4.6"
+version = "0.5.0"
 default-features = false
 features = ["builtin-queue", "driver", "gateway", "native", "serenity"]
 
