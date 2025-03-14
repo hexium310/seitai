@@ -1,7 +1,7 @@
 use futures::future::BoxFuture;
 use sea_query::{ColumnDef, Expr, ForeignKey, ForeignKeyAction, Index, PgFunc, PostgresQueryBuilder, Table};
 use sqlx::{PgConnection, Postgres};
-use sqlx_migrator::{migration::Migration, operation::Operation, vec_box};
+use sqlx_migrator::{operation::Operation, vec_box};
 
 use crate::{sound::DatabaseSound, soundsticker::DatabaseSoundsticker, sticker::DatabaseSticker};
 
@@ -172,24 +172,14 @@ impl Operation<Postgres> for CreateIndexOperation {
     }
 }
 
-// TODO: use macro after new sqlx_migrator version is releaseed
-impl Migration<Postgres> for V2Migration {
-    fn app(&self) -> &str {
-        "seitai"
-    }
-
-    fn name(&self) -> &str {
-        "create soundstickers"
-    }
-
-    fn parents(&self) -> Vec<Box<dyn Migration<Postgres>>> {
-        vec_box![]
-    }
-
-    fn operations(&self) -> Vec<Box<dyn Operation<Postgres>>> {
-        vec_box![
-            CreateTableOperation,
-            CreateIndexOperation,
-        ]
-    }
-}
+sqlx_migrator::migration!(
+    sqlx::Postgres,
+    V2Migration,
+    "seitai",
+    "create soundstickers",
+    vec_box![],
+    vec_box![
+        CreateTableOperation,
+        CreateIndexOperation,
+    ]
+);
