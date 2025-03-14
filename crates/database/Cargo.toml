@@ -30,7 +30,7 @@ default-features = false
 features = ["postgres", "runtime-tokio", "tls-native-tls", "uuid"]
 
 [dependencies.sqlx_migrator]
-version = "0.16.2"
+version = "0.17.0"
 features = ["postgres"]
 
 [dependencies.serde]
