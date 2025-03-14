@@ -32,7 +32,7 @@ impl Migrator {
         migrator.add_migrations(vec_box!(
             v1_users_and_speakers::V1Migration,
             v2_soundstickers::V2Migration,
-        ));
+        )).expect("failed to add migrations to migrator");
 
         Self { inner: migrator }
     }
