@@ -4,7 +4,7 @@ default-members = ["seitai"]
 resolver = "3"
 
 [workspace.dependencies.anyhow]
-version = "1.0.97"
+version = "1.0.98"
 
 [workspace.dependencies.http-body-util]
 version = "0.1.3"
