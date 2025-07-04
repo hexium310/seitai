@@ -32,7 +32,7 @@ version = "0.12.4"
 default-features = false
 
 [workspace.dependencies.tokio]
-version = "1.45.1"
+version = "1.46.0"
 features = ["macros", "net", "rt-multi-thread", "signal"]
 
 [workspace.dependencies.tracing]
