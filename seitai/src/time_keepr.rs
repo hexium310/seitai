@@ -11,7 +11,7 @@ impl<K: Eq + Hash> TimeKeeper<K> {
     }
 
     pub fn is_elapsed(&self, key: &K, interval: Duration) -> bool {
-        self.inner.get(key).map(|v| v.elapsed() < interval).unwrap_or(false)
+        self.inner.get(key).map(|v| v.elapsed() > interval).unwrap_or(true)
     }
 
     pub fn record(&mut self, key: K) {
