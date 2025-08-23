@@ -20,31 +20,25 @@ RUN --mount=type=bind,source=crates,target=crates \
     --mount=type=cache,target=/usr/src/myapp/target \
     cargo build --release --workspace \
     && cp target/release/restarter /restarter \
-    && cp target/release/seitai /seitai
+    && cp target/release/seitai /seitai \
+    && bash -c 'mkdir -p /{seitai,restarter}_libs/lib{,64}' \
+    && ldd /seitai | awk '/=>/{ print $3 }' | xargs cp --dereference --target-directory=/seitai_libs/lib \
+    && ldd /restarter | awk '/=>/{ print $3 }' | xargs cp --dereference --target-directory=/restarter_libs/lib
 
 FROM scratch AS restarter
 LABEL io.github.hexium310.seitai.app=restarter
 LABEL org.opencontainers.image.source=https://github.com/hexium310/seitai
-COPY --from=runtime /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=runtime /lib/x86_64-linux-gnu/libc.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libcrypto.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libgcc_s.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libm.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libssl.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib64/ld-linux-x86-64.so* /lib64/
-COPY --from=builder /restarter /
+COPY --link --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+COPY --link --from=builder /restarter_libs/lib/* /lib/
+COPY --link --from=builder /lib64/ld-linux-x86-64.so* /lib64/
+COPY --link --from=builder /restarter /
 CMD ["/restarter"]
 
 FROM scratch AS seitai
 LABEL io.github.hexium310.seitai.app=seitai
 LABEL org.opencontainers.image.source=https://github.com/hexium310/seitai
-COPY --from=runtime /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=runtime /lib/x86_64-linux-gnu/libc.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libcrypto.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libgcc_s.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libm.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libopus.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib/x86_64-linux-gnu/libssl.so* /lib/x86_64-linux-gnu/
-COPY --from=runtime /lib64/ld-linux-x86-64.so* /lib64/
-COPY --from=builder /seitai /
+COPY --link --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+COPY --link --from=builder /seitai_libs/lib/* /lib/
+COPY --link --from=builder /lib64/ld-linux-x86-64.so* /lib64/
+COPY --link --from=builder /seitai /
 CMD ["/seitai"]
