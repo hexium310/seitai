@@ -212,6 +212,7 @@ where
                     // guild_id in params of last_sent is where bot sent sound, not where sound is registered.
                     let key = (guild_id, sound_id);
                     if !last_sent.is_elapsed(&key, Duration::from_secs(10)) {
+                        last_sent.record(key);
                         continue;
                     }
 
