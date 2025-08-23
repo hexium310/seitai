@@ -37,7 +37,7 @@ use crate::{
     audio::{cache::PredefinedUtterance, Audio, AudioRepository},
     character_converter::to_half_width,
     commands,
-    time_keepr::TimeKeeper,
+    time_keeper::TimeKeeper,
     regex,
     speaker::Speaker,
     utils::{get_manager, get_voicevox, normalize},
