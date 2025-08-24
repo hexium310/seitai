@@ -10,8 +10,8 @@ impl<K: Eq + Hash> TimeKeeper<K> {
         Self { inner: HashMap::new() }
     }
 
-    pub fn is_elapsed(&self, key: &K, interval: Duration) -> bool {
-        self.inner.get(key).map(|v| v.elapsed() < interval).unwrap_or(false)
+    pub fn elapsed(&self, key: &K, interval: Duration) -> bool {
+        self.inner.get(key).map(|v| v.elapsed() > interval).unwrap_or(true)
     }
 
     pub fn record(&mut self, key: K) {

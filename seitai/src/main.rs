@@ -5,7 +5,7 @@ use cli::Application;
 use database::{ConnectOptions, PgConnectOptions, PgPool, PgPoolOptions};
 use futures::lock::Mutex;
 use hashbrown::HashMap;
-use time_keepr::TimeKeeper;
+use time_keeper::TimeKeeper;
 use logging::initialize_logging;
 use serenity::{client::Client, model::gateway::GatewayIntents, prelude::TypeMapKey};
 use songbird::SerenityInit;
@@ -25,7 +25,7 @@ mod commands;
 mod event_handler;
 mod regex;
 mod speaker;
-mod time_keepr;
+mod time_keeper;
 mod utils;
 
 struct VoicevoxClient;
