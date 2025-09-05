@@ -42,7 +42,7 @@ version = "0.1.41"
 version = "2.5.7"
 
 [workspace.dependencies.uuid]
-version = "1.18.0"
+version = "1.18.1"
 features = ["v4", "serde"]
 
 [profile.dev.package."*"]
