@@ -19,7 +19,7 @@ workspace = true
 workspace = true
 
 [dependencies.indexmap]
-version = "2.11.0"
+version = "2.11.1"
 features = ["serde"]
 
 [dependencies.serde]
