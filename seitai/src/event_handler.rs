@@ -80,7 +80,7 @@ where
         &'s self,
         context: Context,
         interaction: Interaction,
-    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'async_trait>>
     where
         Self: 'async_trait,
         's: 'async_trait,
@@ -126,7 +126,7 @@ where
         &'s self,
         context: Context,
         message: Message,
-    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'async_trait>>
     where
         Self: 'async_trait,
         's: 'async_trait,
@@ -329,7 +329,7 @@ where
         &'s self,
         context: Context,
         ready: Ready,
-    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'async_trait>>
     where
         Self: 'async_trait,
         's: 'async_trait,
@@ -365,7 +365,7 @@ where
         context: Context,
         old_state: Option<VoiceState>,
         new_state: VoiceState,
-    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'async_trait>>
     where
         Self: 'async_trait,
         's: 'async_trait,
