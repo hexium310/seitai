@@ -68,7 +68,7 @@ features = ["derive"]
 version = "0.27.2"
 
 [dependencies.symphonia]
-version = "0.5.4"
+version = "0.5.5"
 features = ["wav"]
 
 [dependencies.tokio]
