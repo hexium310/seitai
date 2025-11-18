@@ -10,7 +10,7 @@ version = "1.0.100"
 version = "0.1.3"
 
 [workspace.dependencies.hyper]
-version = "1.7.0"
+version = "1.8.1"
 features = ["client", "http1"]
 
 [workspace.dependencies.hyper-util]
