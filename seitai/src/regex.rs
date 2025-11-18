@@ -11,4 +11,5 @@ pub(crate) static SOUNDMOJI: Lazy<Regex> = lazy_regex!(r"<sound:(?<guild_id>\d+)
 pub(crate) static URL: Lazy<Regex> = lazy_regex!(r"[[:alpha:]][[:alnum:]+\-.]*?://[^\s]+");
 pub(crate) static W: Lazy<Regex> = lazy_regex!(r"([^ｗ[:word:]]|^)[wｗ]([^ｗ[:word:]]|$)");
 pub(crate) static WW: Lazy<Regex> = lazy_regex!(r"([^ｗ[:word:]]|^)[wｗ]{2,}([^ｗ[:word:]]|$)");
-pub(crate) static WORD: Lazy<Regex> = lazy_regex!(r"[[:alpha:]'-]{2,}");
+// When pattern without `:?`s, only word of emoji between :s is extracted
+pub(crate) static WORD: Lazy<Regex> = lazy_regex!(r":?[[:alpha:]'-]{2,}:?");
