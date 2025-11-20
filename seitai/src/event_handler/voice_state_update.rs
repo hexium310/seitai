@@ -1,3 +1,6 @@
+use std::convert::Infallible;
+
+use anyhow::{Context as _, Result};
 use futures::{StreamExt, future, stream};
 use hashbrown::HashMap;
 use ordered_float::NotNan;
@@ -7,8 +10,8 @@ use songbird::{Call, input::Input};
 use crate::{
     audio::{Audio, AudioRepository, cache::PredefinedUtterance},
     event_handler::Handler,
+    songbird_manager::SongbirdManager,
     speaker::Speaker,
-    utils,
 };
 
 struct VoiceStateUpdateHandler<'a, Repository> {
@@ -16,6 +19,14 @@ struct VoiceStateUpdateHandler<'a, Repository> {
     context: Context,
     old_state: Option<VoiceState>,
     new_state: VoiceState,
+}
+
+#[derive(Debug)]
+enum VoiceStateKind {
+    BotDisconnects,
+    UserJoinToChannelWhereBotPresents,
+    BotIsAlone,
+    Other,
 }
 
 const SYSTEM_SPEAKER: &str = "1";
@@ -28,41 +39,24 @@ where
         Self { event_handler, context, old_state, new_state }
     }
 
-    async fn handle(&self) {
+    async fn kind(&self) -> Result<VoiceStateKind> {
         let Some(guild_id) = self.new_state.guild_id else {
-            return;
+            return Ok(VoiceStateKind::Other);
         };
 
-        let manager = match utils::get_manager(&self.context).await {
-            Ok(manager) => manager,
-            Err(error) => {
-                tracing::error!("{error:?}");
-                return;
-            },
-        };
-        let call = manager.get_or_insert(guild_id);
-        let mut call = call.lock().await;
+        let call = SongbirdManager.get_call(&self.context, guild_id).await?;
 
-        let bot_id = match self.context.http.get_current_user().await {
-            Ok(bot) => bot.id,
-            Err(error) => {
-                tracing::error!("failed to get current user on voice state update\nError: {error:?}");
-                return;
-            },
-        };
-
+        let bot_id = self.context.http.get_current_user().await.context("failed to get bot user")?.id;
         let is_bot = self.new_state.user_id == bot_id;
         let is_disconnected = self.new_state.channel_id.is_none();
 
-        if is_bot {
-            if is_disconnected {
-                let mut connections = self.event_handler.connections.lock().await;
-                connections.remove(&guild_id);
-            }
-            return;
+        if is_bot && is_disconnected {
+            return Ok(VoiceStateKind::BotDisconnects);
         }
 
         let channel_id_bot_at = call
+            .lock()
+            .await
             .current_channel()
             .map(|channel_id| ChannelId::from(channel_id.0));
         let newly_connected = match &self.old_state {
@@ -72,53 +66,95 @@ where
         let is_connected_bot_at = self.new_state.channel_id == channel_id_bot_at;
 
         if !is_disconnected && newly_connected && is_connected_bot_at {
-            let mut connections = self.event_handler.connections.lock().await;
-            handle_connect(&self.event_handler.audio_repository, &self.new_state, &mut call, is_bot, &mut connections).await;
-            return;
+            return Ok(VoiceStateKind::UserJoinToChannelWhereBotPresents);
         }
 
-        if let Some(channel_id_bot_at) = channel_id_bot_at {
-            let channel = match channel_id_bot_at.to_channel(&self.context.http).await {
-                Ok(channel) => channel.guild(),
-                Err(error) => {
-                    tracing::error!("failed to get channel {channel_id_bot_at} to check alone\nError: {error:?}");
-                    return;
-                },
-            };
-            let Some(channel) = channel else {
-                return;
-            };
-            if channel.kind != ChannelType::Voice {
-                return;
-            }
-            let members = match channel.members(&self.context.cache) {
-                Ok(members) => members,
-                Err(error) => {
-                    tracing::error!(
-                        "failed to get members in channel {channel_id_bot_at} to check alone\nError: {error:?}"
-                    );
-                    return;
-                },
-            };
-            let ids = members.iter().map(|v| v.user.id).collect::<Vec<_>>();
-            let is_alone = ids != vec![bot_id];
-            if is_alone {
-                return;
-            }
+        let Some(channel_id_bot_at) = channel_id_bot_at else {
+            return Ok(VoiceStateKind::Other);
+        };
 
-            if let Err(error) = call.leave().await {
-                tracing::error!("failed to leave when bot is alone in voice channel\n:Error {error:?}");
-            };
+        let Some(channel) = channel_id_bot_at
+            .to_channel(&self.context.http)
+            .await
+            .with_context(|| format!("failed to get channel {channel_id_bot_at} to check alone"))?
+            .guild()
+        else {
+            return Ok(VoiceStateKind::Other);
+        };
+
+        if channel.kind != ChannelType::Voice {
+            return Ok(VoiceStateKind::Other);
         }
+
+        let members = channel
+            .members(&self.context.cache)
+            .with_context(|| format!("failed to get members in channel {channel_id_bot_at} to check alone"))?;
+        let is_alone = members.iter().map(|v| v.user.id).eq([bot_id].into_iter());
+        if is_alone {
+            return Ok(VoiceStateKind::BotIsAlone);
+        }
+
+        Ok(VoiceStateKind::Other)
+    }
+
+    async fn handle_disconnect(&self) -> std::result::Result<(), Infallible> {
+        let Some(guild_id) = self.new_state.guild_id else {
+            return Ok(());
+        };
+
+        let mut connections = self.event_handler.connections.lock().await;
+        connections.remove(&guild_id);
+
+        Ok(())
+    }
+
+    async fn handle_join(&self) -> Result<()> {
+        let Some(guild_id) = self.new_state.guild_id else {
+            return Ok(());
+        };
+
+        let call = SongbirdManager.get_call(&self.context, guild_id).await?;
+
+        let bot_id = self.context.http.get_current_user().await.context("failed to get bot user")?.id;
+        let is_bot = self.new_state.user_id == bot_id;
+
+        let mut connections = self.event_handler.connections.lock().await;
+
+        handle_connect(&self.event_handler.audio_repository, &self.new_state, &mut *call.lock().await, is_bot, &mut connections).await;
+
+        Ok(())
+    }
+
+    async fn handle_alone(&self) -> Result<()> {
+        let Some(guild_id) = self.new_state.guild_id else {
+            return Ok(());
+        };
+
+        let call = SongbirdManager.get_call(&self.context, guild_id).await?;
+
+        call.lock().await.leave().await.context("failed to leave when bot is alone in voice channel")?;
+
+        Ok(())
+    }
+
+    async fn handle(&self) -> Result<()> {
+        match self.kind().await? {
+            VoiceStateKind::BotDisconnects => self.handle_disconnect().await?,
+            VoiceStateKind::UserJoinToChannelWhereBotPresents => self.handle_join().await?,
+            VoiceStateKind::BotIsAlone => self.handle_alone().await?,
+            VoiceStateKind::Other => return Ok(()),
+        }
+
+        Ok(())
     }
 }
 
-pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, old_state: Option<VoiceState>, new_state: VoiceState)
+pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, old_state: Option<VoiceState>, new_state: VoiceState) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     let handle = VoiceStateUpdateHandler::new(event_handler, context, old_state, new_state);
-    handle.handle().await;
+    handle.handle().await
 }
 
 async fn handle_connect<Repository>(

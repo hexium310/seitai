@@ -97,6 +97,10 @@ where
         Self: 'async_trait,
         's: 'async_trait,
     {
-        Box::pin(voice_state_update::handle(self, context, old_state, new_state))
+        Box::pin(async move {
+            if let Err(err) = voice_state_update::handle(self, context, old_state, new_state).await {
+                tracing::error!("{err:?}");
+            }
+        })
     }
 }
