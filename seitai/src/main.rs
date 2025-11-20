@@ -27,6 +27,7 @@ mod regex;
 mod speaker;
 mod time_keeper;
 mod utils;
+mod songbird_manager;
 
 struct VoicevoxClient;
 

@@ -59,7 +59,11 @@ where
         Self: 'async_trait,
         's: 'async_trait,
     {
-        Box::pin(message::handle(self, context, message))
+        Box::pin(async move {
+            if let Err(err) = message::handle(self, context, message).await {
+                tracing::error!("{err:?}");
+            }
+        })
     }
 
     #[instrument(skip(self, context))]

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, time::Duration};
+use std::{borrow::Cow, error::Error, ops::DerefMut, sync::Arc, time::Duration};
 
 use anyhow::{Context as _, Result, bail};
 use futures::{StreamExt, TryFutureExt, future, stream};
@@ -13,10 +13,10 @@ use hyper_util::rt::TokioIo;
 use ordered_float::NotNan;
 use regex_lite::{Captures, Regex};
 use serde::{Deserialize, de::DeserializeOwned};
-use serenity::all::{ChannelId, Context, GuildId, Message};
-use songbird::input::Input;
+use serenity::all::{Channel::Guild, ChannelId, Context, GuildId, Message};
+use songbird::{Call, input::Input};
 use soundboard::sound::SoundId;
-use tokio::net::TcpStream;
+use tokio::{net::TcpStream, sync::Mutex};
 use url::Url;
 use voicevox::dictionary::response::GetUserDictResult;
 
@@ -25,6 +25,7 @@ use crate::{
     character_converter,
     event_handler::Handler,
     regex,
+    songbird_manager::SongbirdManager,
     speaker::Speaker,
     utils,
 };
@@ -33,6 +34,7 @@ struct MessageHandler<'a, Repository> {
     event_handler: &'a Handler<Repository>,
     context: Context,
     message: Message,
+    songbird_manager: SongbirdManager,
 }
 
 #[derive(Deserialize)]
@@ -56,208 +58,243 @@ where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     fn new(event_handler: &'a Handler<Repository>, context: Context, message: Message) -> Self {
-        Self { event_handler, context, message }
+        Self { event_handler, context, message, songbird_manager: SongbirdManager }
     }
 
-    async fn handle(&self) {
+    async fn should_skip(&self) -> Result<bool> {
+        // Skip when the message is authored by bot
         if self.message.author.bot {
-            return;
+            return Ok(true);
         }
 
+        // Skip when the message is outside of the guild
         let Some(guild_id) = self.message.guild_id else {
-            return;
+            return Ok(true);
         };
 
-        let manager = match utils::get_manager(&self.context).await {
-            Ok(manager) => manager,
-            Err(error) => {
-                tracing::error!("{error:?}");
-                return;
-            },
-        };
-        let call = manager.get_or_insert(guild_id);
-        let mut call = call.lock().await;
+        let call = self.songbird_manager.get_call(&self.context, guild_id).await?;
 
-        let (Some(_), Some(channel_id_bot_at)) = (call.current_connection(), call.current_channel()) else {
-            return;
-        };
-        let channel_id_bot_at = ChannelId::from(channel_id_bot_at.0);
+        // Skip when connection doesn't exist
+        if call.lock().await.current_connection().is_none() {
+            return Ok(true);
+        }
 
-        let is_voice_channel_bot_at = {
-            let connections = self.event_handler.connections.lock().await;
-            connections
-                .get(&guild_id)
-                .is_some_and(|channel_id| &self.message.channel_id == channel_id)
+        // Skip when bot isn't connnected to channel
+        let Some(channel_id_bot_at) = call
+            .lock()
+            .await
+            .current_channel()
+            .map(|v| ChannelId::from(v.0))
+        else {
+            return Ok(true);
         };
+
+        let is_voice_channel_bot_at = self
+            .event_handler
+            .connections
+            .lock()
+            .await
+            .get(&guild_id)
+            .is_some_and(|channel_id| &self.message.channel_id == channel_id);
         let is_text_channel_binded_to_bot = self.message.channel_id == channel_id_bot_at;
 
+        // Skip when bot isn't connected to the channel where message was posted
         if !is_voice_channel_bot_at && !is_text_channel_binded_to_bot {
-            return;
+            return Ok(true);
         }
 
-        let channel_bot_at = match channel_id_bot_at.to_channel(&self.context.http).await {
-            Ok(channel_bot_at) => channel_bot_at,
-            Err(error) => {
-                tracing::error!("failed to get channel: {channel_id_bot_at:?}\nError: {error:?}");
-                return;
-            },
+        let channel_bot_at = channel_id_bot_at
+            .to_channel(&self.context.http)
+            .await
+            .with_context(|| format!("failed to get channel: {channel_id_bot_at:?}"))?;
+
+        // Skip when bot isn't connected to the voice channel of guild
+        let Guild(channel_bot_at) = channel_bot_at else {
+            return Ok(true);
         };
 
-        let serenity::all::Channel::Guild(channel_bot_at) = channel_bot_at else {
-            return;
-        };
-
-        let members = match channel_bot_at.members(&self.context.cache) {
-            Ok(members) => members,
-            Err(error) => {
-                tracing::error!("failed to get members in channel: {channel_bot_at:?}\nError: {error:?}");
-                return;
-            },
-        };
-        if !members
+        // Skip when message author isn't voice channel member
+        if !channel_bot_at
+            .members(&self.context.cache)
+            .with_context(|| format!("failed to get members in channel: {channel_id_bot_at:?}"))?
             .into_iter()
             .map(|member| member.user)
             .any(|user| self.message.author == user)
         {
-            return;
+            return Ok(true);
         }
 
-        if !self.message.sticker_items.is_empty() {
-            let sticker_ids = self.message.sticker_items.clone().into_iter().map(|v| v.id.get());
-            let soundstickers = match database::soundsticker::fetch_by_ids(&self.event_handler.database, sticker_ids.clone()).await {
-                Ok(soundstickers) => soundstickers,
-                Err(err) => {
-                    tracing::error!("failed to fetch soundstickers by ids: {:?}\nError: {err:?}", sticker_ids.collect::<Vec<_>>());
-                    return;
-                },
-            };
+        Ok(false)
+    }
 
-            for soundsticker in soundstickers {
-                let sound_id = SoundId::new(soundsticker.sound_id);
-                let sound_guild_id = soundsticker.sound_guild_id.map(GuildId::new).or(Some(guild_id));
+    async fn handle_sticker(&self) -> Result<()> {
+        let Some(guild_id) = self.message.guild_id else {
+            return Ok(());
+        };
 
-                let mut last_sent = self.event_handler.time_keeper.lock().await;
-                // guild_id in params of last_sent is where bot sent sound, not where sound is registered.
-                let key = (guild_id, sound_id);
-                if !last_sent.elapsed(&key, Duration::from_secs(10)) {
-                    last_sent.record(key);
-                    continue;
-                }
+        let call = self.songbird_manager.get_call(&self.context, guild_id).await?;
 
-                match sound_id.send(&self.context.http, channel_id_bot_at, sound_guild_id).await {
-                    Ok(_) => last_sent.record(key),
-                    Err(err) => {
-                        tracing::error!("failed to send soundboard sound {sound_id:?}\nError: {err:?}");
-                        continue;
-                    },
-                };
+        let Some(channel_id_bot_at) = call
+            .lock()
+            .await
+            .current_channel()
+            .map(|v| ChannelId::from(v.0))
+        else {
+            return Ok(());
+        };
+
+        let sticker_ids = self.message.sticker_items.clone().into_iter().map(|v| v.id.get());
+        let soundstickers = database::soundsticker::fetch_by_ids(&self.event_handler.database, sticker_ids.clone())
+            .await
+            .with_context(|| format!("failed to fetch soundstickers by ids {:?}", sticker_ids.collect::<Vec<_>>()))?;
+
+        for soundsticker in soundstickers {
+            let sound_id = SoundId::new(soundsticker.sound_id);
+            let sound_guild_id = soundsticker.sound_guild_id.map(GuildId::new).or(Some(guild_id));
+
+            let mut last_sent = self.event_handler.time_keeper.lock().await;
+            // guild_id in params of last_sent is where bot sent sound, not where sound is registered.
+            let key = (guild_id, sound_id);
+            if !last_sent.elapsed(&key, Duration::from_secs(10)) {
+                last_sent.record(key);
+                continue;
             }
 
-            return;
+            sound_id
+                .send(&self.context.http, channel_id_bot_at, sound_guild_id)
+                .await
+                .with_context(|| format!("failed to send soundboard sound {sound_id:?}"))?;
+            last_sent.record(key);
+        }
+
+        Ok(())
+    }
+
+    async fn handle_text(&self, call: Arc<Mutex<Call>>, speaker: String, speed: f32) -> Result<()> {
+        let dictionary = {
+            let voicevox = utils::get_voicevox(&self.context)
+                .await
+                .context("failed to get voicevox client for /dictionary command")
+                .unwrap();
+            let voicevox = voicevox.lock().await;
+            voicevox.dictionary.clone()
+        };
+        let dictionary_words = dictionary
+            .list()
+            .await
+            .map(|GetUserDictResult::Ok(list)| {
+                list.values()
+                    .map(|item| character_converter::to_half_width(&item.surface).into_owned())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        let message = replace_message(
+            &self.context,
+            &self.message,
+            &self.event_handler.kanatrans_host,
+            self.event_handler.kanatrans_port,
+            &dictionary_words,
+        )
+            .await;
+        let lines = message
+            .lines()
+            .filter_map(|v| {
+                let text = v.trim();
+                match text.is_empty() {
+                    true => Some(text),
+                    false => None,
+                }
+            });
+
+        for text in lines {
+            let audio = Audio {
+                text: text.to_string(),
+                speaker: speaker.clone(),
+                speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
+            };
+
+            enqueue(call.lock().await, audio, &self.event_handler.audio_repository).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn handle_attachment(&self, call: Arc<Mutex<Call>>, speaker: String, speed: f32) -> Result<()> {
+        let audio = Audio {
+            text: PredefinedUtterance::Attachment.as_ref().to_string(),
+            speaker,
+            speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
+        };
+
+        enqueue(call.lock().await, audio, &self.event_handler.audio_repository).await?;
+
+        Ok(())
+    }
+
+    async fn handle(&self) -> Result<()> {
+        if self.should_skip().await? {
+            return Ok(());
+        };
+
+        let Some(guild_id) = self.message.guild_id else {
+            return Ok(());
+        };
+
+        let call = self.songbird_manager.get_call(&self.context, guild_id).await?;
+
+        if !self.message.sticker_items.is_empty() {
+            self.handle_sticker().await?;
         }
 
         let ids: Vec<i64> = vec![self.message.author.id.into()];
-        let speaker = match database::user::fetch_by_ids(&self.event_handler.database, &ids).await {
-            Ok(users) => users
-                .first()
-                .unwrap_or(&database::user::User::default())
-                .speaker_id
-                .to_string(),
-            Err(error) => {
-                tracing::error!("failed to fetch users by ids: {ids:?}\nError: {error:?}");
-                return;
-            },
-        };
+        let speaker = database::user::fetch_by_ids(&self.event_handler.database, &ids)
+            .await
+            .with_context(|| format!("failed to fetch users by ids: {ids:?}"))?
+            .first()
+            .unwrap_or(&database::user::User::default())
+            .speaker_id
+            .to_string();
 
         let default = database::user::UserSpeaker::default();
-        let speed =
-        match database::user::fetch_with_speaker_by_ids(&self.event_handler.database, &[self.message.author.id.into()]).await {
-            Ok(speakers) => speakers
-                .first()
-                .unwrap_or(&default)
-                .speed
-                .or(default.speed)
-                .unwrap_or(1.2),
-            Err(error) => {
-                tracing::error!("failed to fetch speakers\nError: {error:?}");
-                return;
-            },
-        };
+        let speed = database::user::fetch_with_speaker_by_ids(&self.event_handler.database, &ids)
+            .await
+            .context("failed to fetch speakers")?
+            .first()
+            .unwrap_or(&default)
+            .speed
+            .or(default.speed)
+            .unwrap_or(1.2);
 
-        {
-            let dictionary = {
-                let voicevox = utils::get_voicevox(&self.context)
-                    .await
-                    .context("failed to get voicevox client for /dictionary command")
-                    .unwrap();
-                let voicevox = voicevox.lock().await;
-                voicevox.dictionary.clone()
-            };
-            let dictionary_words = dictionary
-                .list()
-                .await
-                .map(|GetUserDictResult::Ok(list)| {
-                    list.values()
-                        .map(|item| character_converter::to_half_width(&item.surface).into_owned())
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-
-            for text in replace_message(
-                &self.context,
-                &self.message,
-                &self.event_handler.kanatrans_host,
-                self.event_handler.kanatrans_port,
-                &dictionary_words,
-            )
-                .await
-                .split('\n')
-            {
-                let text = text.trim();
-                if text.is_empty() {
-                    continue;
-                }
-
-                let audio = Audio {
-                    text: text.to_string(),
-                    speaker: speaker.clone(),
-                    speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
-                };
-                match self.event_handler.audio_repository.get(audio).await {
-                    Ok(input) => {
-                        call.enqueue_input(input).await;
-                    },
-                    Err(error) => {
-                        tracing::error!("failed to get audio source\nError: {error:?}");
-                    },
-                };
-            }
-
-            if !self.message.attachments.is_empty() {
-                let audio = Audio {
-                    text: PredefinedUtterance::Attachment.as_ref().to_string(),
-                    speaker: speaker.clone(),
-                    speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
-                };
-                match self.event_handler.audio_repository.get(audio).await {
-                    Ok(input) => {
-                        call.enqueue_input(input).await;
-                    },
-                    Err(error) => {
-                        tracing::error!("failed to get audio source\nError: {error:?}");
-                    },
-                };
-            }
+        if !self.message.content.is_empty() {
+            self.handle_text(call.clone(), speaker.clone(), speed).await?;
         }
+
+        if !self.message.attachments.is_empty() {
+            self.handle_attachment(call.clone(), speaker.clone(), speed).await?;
+        }
+
+        Ok(())
     }
 }
 
-pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, message: Message)
+pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, message: Message) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     let handler = MessageHandler::new(event_handler, context, message);
-    handler.handle().await;
+    handler.handle().await
+}
+
+async fn enqueue(mut call: impl DerefMut<Target = Call>, audio: Audio, audio_repository: &impl AudioRepository<Input = Input>) -> Result<()> {
+    let input = audio_repository
+        .get(audio)
+        .await
+        .context("failed to get audio source")?;
+
+    call.enqueue_input(input).await;
+
+    Ok(())
 }
 
 async fn replace_message<'a>(
