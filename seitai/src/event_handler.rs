@@ -47,7 +47,11 @@ where
         Self: 'async_trait,
         's: 'async_trait,
     {
-        Box::pin(interaction_create::handle(self, context, interaction))
+        Box::pin(async move {
+            if let Err(err) = interaction_create::handle(self, context, interaction).await {
+                tracing::error!("{err:?}");
+            }
+        })
     }
 
     fn message<'s, 'async_trait>(
