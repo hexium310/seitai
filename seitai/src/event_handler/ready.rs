@@ -1,4 +1,5 @@
-use serenity::all::{Context, Ready};
+use anyhow::{Context as _, Result};
+use serenity::all::{Context, CreateCommand, Ready};
 use songbird::input::Input;
 
 use crate::{audio::AudioRepository, commands, event_handler::Handler};
@@ -18,34 +19,40 @@ where
         Self { event_handler, context, ready }
     }
 
-    async fn handle(&self) {
+    async fn set_commands(&self, commands: &[CreateCommand]) -> Result<()> {
         for guild in &self.ready.guilds {
-            let commands = guild
+            guild
                 .id
-                .set_commands(
-                    &self.context.http,
-                    vec![
-                        commands::dictionary::register(),
-                        commands::help::register(),
-                        commands::join::register(),
-                        commands::leave::register(),
-                        commands::voice::register(),
-                        commands::soundsticker::register(),
-                    ],
-                )
-            .await;
-
-            if let Err(error) = commands {
-                tracing::error!("failed to regeister slash commands\nError: {error:?}");
-            }
+                .set_commands(&self.context.http, commands.to_vec())
+            .await
+            .context("failed to register slash commands")?;
         }
+
+        Ok(())
+    }
+
+    async fn handle(&self) -> Result<()> {
+        tracing::info!("{} is ready", self.ready.user.name);
+
+        let commands = &[
+            commands::dictionary::register(),
+            commands::help::register(),
+            commands::join::register(),
+            commands::leave::register(),
+            commands::voice::register(),
+            commands::soundsticker::register(),
+        ];
+
+        self.set_commands(commands).await?;
+
+        Ok(())
     }
 }
 
-pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, ready: Ready)
+pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, ready: Ready) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     let handler = ReadyHandler::new(event_handler, context, ready);
-    handler.handle().await;
+    handler.handle().await
 }

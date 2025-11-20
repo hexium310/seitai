@@ -80,9 +80,11 @@ where
         Self: 'async_trait,
         's: 'async_trait,
     {
-        tracing::info!("{} is ready", ready.user.name);
-
-        Box::pin(ready::handle(self, context, ready))
+        Box::pin(async move {
+            if let Err(err) = ready::handle(self, context, ready).await {
+                tracing::error!("{err:?}");
+            }
+        })
     }
 
     fn voice_state_update<'s, 'async_trait>(
