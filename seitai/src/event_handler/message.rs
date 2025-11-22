@@ -32,9 +32,9 @@ use crate::{
 
 struct MessageHandler<'a, Repository> {
     event_handler: &'a Handler<Repository>,
-    context: Context,
-    message: Message,
-    songbird_manager: SongbirdManager,
+    context: &'a Context,
+    message: &'a Message,
+    songbird_manager: SongbirdManager<'a>,
 }
 
 #[derive(Deserialize)]
@@ -57,8 +57,13 @@ impl<'a, Repository> MessageHandler<'a, Repository>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
-    fn new(event_handler: &'a Handler<Repository>, context: Context, message: Message) -> Self {
-        Self { event_handler, context, message, songbird_manager: SongbirdManager }
+    fn new(event_handler: &'a Handler<Repository>, context: &'a Context, message: &'a Message) -> Self {
+        Self {
+            event_handler,
+            context,
+            message,
+            songbird_manager: SongbirdManager::new(context),
+        }
     }
 
     async fn should_skip(&self) -> Result<bool> {
@@ -72,7 +77,7 @@ where
             return Ok(true);
         };
 
-        let call = self.songbird_manager.get_call(&self.context, guild_id).await?;
+        let call = self.songbird_manager.call(guild_id).await?;
 
         // Skip when connection doesn't exist
         if call.lock().await.current_connection().is_none() {
@@ -132,7 +137,7 @@ where
             return Ok(());
         };
 
-        let call = self.songbird_manager.get_call(&self.context, guild_id).await?;
+        let call = self.songbird_manager.call(guild_id).await?;
 
         let Some(channel_id_bot_at) = call
             .lock()
@@ -172,7 +177,7 @@ where
 
     async fn handle_text(&self, call: Arc<Mutex<Call>>, speaker: String, speed: f32) -> Result<()> {
         let dictionary = {
-            let voicevox = utils::get_voicevox(&self.context)
+            let voicevox = utils::get_voicevox(self.context)
                 .await
                 .context("failed to get voicevox client for /dictionary command")
                 .unwrap();
@@ -190,8 +195,8 @@ where
             .unwrap_or_default();
 
         let message = replace_message(
-            &self.context,
-            &self.message,
+            self.context,
+            self.message,
             &self.event_handler.kanatrans_host,
             self.event_handler.kanatrans_port,
             &dictionary_words,
@@ -201,10 +206,7 @@ where
             .lines()
             .filter_map(|v| {
                 let text = v.trim();
-                match text.is_empty() {
-                    true => Some(text),
-                    false => None,
-                }
+                (!text.is_empty()).then_some(text)
             });
 
         for text in lines {
@@ -241,7 +243,7 @@ where
             return Ok(());
         };
 
-        let call = self.songbird_manager.get_call(&self.context, guild_id).await?;
+        let call = self.songbird_manager.call(guild_id).await?;
 
         if !self.message.sticker_items.is_empty() {
             self.handle_sticker().await?;
@@ -282,7 +284,7 @@ pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, cont
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
-    let handler = MessageHandler::new(event_handler, context, message);
+    let handler = MessageHandler::new(event_handler, &context, &message);
     handler.handle().await
 }
 

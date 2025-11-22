@@ -48,7 +48,7 @@ where
         's: 'async_trait,
     {
         Box::pin(async move {
-            if let Err(err) = interaction_create::handle(self, context, interaction).await {
+            if let Err(err) = interaction_create::handle(self, &context, &interaction).await {
                 tracing::error!("{err:?}");
             }
         })
@@ -81,7 +81,7 @@ where
         's: 'async_trait,
     {
         Box::pin(async move {
-            if let Err(err) = ready::handle(self, context, ready).await {
+            if let Err(err) = ready::handle(self, &context, &ready).await {
                 tracing::error!("{err:?}");
             }
         })
@@ -98,7 +98,7 @@ where
         's: 'async_trait,
     {
         Box::pin(async move {
-            if let Err(err) = voice_state_update::handle(self, context, old_state, new_state).await {
+            if let Err(err) = voice_state_update::handle(self, &context, &old_state, &new_state).await {
                 tracing::error!("{err:?}");
             }
         })

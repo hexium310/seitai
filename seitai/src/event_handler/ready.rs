@@ -7,15 +7,15 @@ use crate::{audio::AudioRepository, commands, event_handler::Handler};
 #[allow(unused)]
 struct ReadyHandler<'a, Repository> {
     event_handler: &'a Handler<Repository>,
-    context: Context,
-    ready: Ready,
+    context: &'a Context,
+    ready: &'a Ready,
 }
 
 impl<'a, Repository> ReadyHandler<'a, Repository>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
-    fn new(event_handler: &'a Handler<Repository>, context: Context, ready: Ready) -> Self {
+    fn new(event_handler: &'a Handler<Repository>, context: &'a Context, ready: &'a Ready) -> Self {
         Self { event_handler, context, ready }
     }
 
@@ -49,7 +49,7 @@ where
     }
 }
 
-pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, ready: Ready) -> Result<()>
+pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: &Context, ready: &Ready) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {

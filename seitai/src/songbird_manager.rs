@@ -5,17 +5,24 @@ use serenity::all::{Context, GuildId};
 use songbird::{Call, Songbird};
 use tokio::sync::Mutex;
 
-pub(crate) struct SongbirdManager;
+#[derive(Clone)]
+pub(crate) struct SongbirdManager<'a> {
+    context: &'a Context,
+}
 
-impl SongbirdManager {
-    pub(crate) async fn manager(&self, context: &Context) -> Result<Arc<Songbird>> {
-        songbird::get(context)
+impl<'a> SongbirdManager<'a> {
+    pub(crate) fn new(context: &'a Context) -> Self {
+        Self { context }
+    }
+
+    pub(crate) async fn manager(&self) -> Result<Arc<Songbird>> {
+        songbird::get(self.context)
             .await
             .context("failed to get songbird voice client")
     }
 
-    pub(crate) async fn get_call(&self, context: &Context, guild_id: impl Into<GuildId>) -> Result<Arc<Mutex<Call>>> {
-        let manager = self.manager(context).await?;
+    pub(crate) async fn call(&self, guild_id: impl Into<GuildId>) -> Result<Arc<Mutex<Call>>> {
+        let manager = self.manager().await?;
         Ok(manager.get_or_insert(guild_id.into()))
     }
 }
