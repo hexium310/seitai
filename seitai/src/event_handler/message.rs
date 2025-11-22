@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, ops::DerefMut, sync::Arc, time::Duration};
+use std::{borrow::Cow, error::Error, time::Duration};
 
 use anyhow::{Context as _, Result, bail};
 use futures::{StreamExt, TryFutureExt, future, stream};
@@ -13,15 +13,16 @@ use hyper_util::rt::TokioIo;
 use ordered_float::NotNan;
 use regex_lite::{Captures, Regex};
 use serde::{Deserialize, de::DeserializeOwned};
-use serenity::all::{Channel::Guild, ChannelId, Context, GuildId, Message};
-use songbird::{Call, input::Input};
+use serenity::all::{Context, GuildId, Message};
+use songbird::input::Input;
 use soundboard::sound::SoundId;
-use tokio::{net::TcpStream, sync::Mutex};
+use tokio::net::TcpStream;
 use url::Url;
 use voicevox::dictionary::response::GetUserDictResult;
 
 use crate::{
     audio::{Audio, AudioRepository, cache::PredefinedUtterance},
+    bot::Bot,
     character_converter,
     event_handler::Handler,
     regex,
@@ -32,6 +33,12 @@ use crate::{
 
 struct MessageHandler<'a, Repository> {
     event_handler: &'a Handler<Repository>,
+    context: &'a Context,
+    message: &'a Message,
+    observer: MessageObserver<'a>,
+}
+
+struct MessageObserver<'a> {
     context: &'a Context,
     message: &'a Message,
     songbird_manager: SongbirdManager<'a>,
@@ -58,12 +65,9 @@ where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
     fn new(event_handler: &'a Handler<Repository>, context: &'a Context, message: &'a Message) -> Self {
-        Self {
-            event_handler,
-            context,
-            message,
-            songbird_manager: SongbirdManager::new(context),
-        }
+        let observer = MessageObserver::new(context, message);
+
+        Self { event_handler, context, message, observer }
     }
 
     async fn should_skip(&self) -> Result<bool> {
@@ -77,7 +81,7 @@ where
             return Ok(true);
         };
 
-        let call = self.songbird_manager.call(guild_id).await?;
+        let call = self.observer.call().await?;
 
         // Skip when connection doesn't exist
         if call.lock().await.current_connection().is_none() {
@@ -85,12 +89,7 @@ where
         }
 
         // Skip when bot isn't connnected to channel
-        let Some(channel_id_bot_at) = call
-            .lock()
-            .await
-            .current_channel()
-            .map(|v| ChannelId::from(v.0))
-        else {
+        let Some(channel_id_bot_at) = self.observer.channel_id().await? else {
             return Ok(true);
         };
 
@@ -108,24 +107,20 @@ where
             return Ok(true);
         }
 
-        let channel_bot_at = channel_id_bot_at
-            .to_channel(&self.context.http)
-            .await
-            .with_context(|| format!("failed to get channel: {channel_id_bot_at:?}"))?;
-
         // Skip when bot isn't connected to the voice channel of guild
-        let Guild(channel_bot_at) = channel_bot_at else {
-            return Ok(true);
+        let Some(channel_bot_at) = self.observer.channel().await? else {
+            return Ok(true)
         };
 
-        // Skip when message author isn't voice channel member
-        if !channel_bot_at
+        let is_authored_by_voice_channel_member = channel_bot_at
             .members(&self.context.cache)
             .with_context(|| format!("failed to get members in channel: {channel_id_bot_at:?}"))?
             .into_iter()
             .map(|member| member.user)
-            .any(|user| self.message.author == user)
-        {
+            .any(|user| self.message.author == user);
+
+        // Skip when message author isn't voice channel member
+        if !is_authored_by_voice_channel_member {
             return Ok(true);
         }
 
@@ -137,14 +132,7 @@ where
             return Ok(());
         };
 
-        let call = self.songbird_manager.call(guild_id).await?;
-
-        let Some(channel_id_bot_at) = call
-            .lock()
-            .await
-            .current_channel()
-            .map(|v| ChannelId::from(v.0))
-        else {
+        let Some(channel_id_bot_at) = self.observer.channel_id().await? else {
             return Ok(());
         };
 
@@ -175,15 +163,12 @@ where
         Ok(())
     }
 
-    async fn handle_text(&self, call: Arc<Mutex<Call>>, speaker: String, speed: f32) -> Result<()> {
-        let dictionary = {
-            let voicevox = utils::get_voicevox(self.context)
-                .await
-                .context("failed to get voicevox client for /dictionary command")
-                .unwrap();
-            let voicevox = voicevox.lock().await;
-            voicevox.dictionary.clone()
-        };
+    async fn handle_text(&self, speaker: String, speed: f32) -> Result<()> {
+        let voicevox = utils::get_voicevox(self.context)
+            .await
+            .context("failed to get voicevox client for /dictionary command")
+            .unwrap();
+        let dictionary = &voicevox.lock().await.dictionary;
         let dictionary_words = dictionary
             .list()
             .await
@@ -216,20 +201,20 @@ where
                 speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
             };
 
-            enqueue(call.lock().await, audio, &self.event_handler.audio_repository).await?;
+            self.observer.enqueue(audio, &self.event_handler.audio_repository).await?;
         }
 
         Ok(())
     }
 
-    async fn handle_attachment(&self, call: Arc<Mutex<Call>>, speaker: String, speed: f32) -> Result<()> {
+    async fn handle_attachment(&self, speaker: String, speed: f32) -> Result<()> {
         let audio = Audio {
             text: PredefinedUtterance::Attachment.as_ref().to_string(),
             speaker,
             speed: NotNan::new(speed).or(NotNan::new(Speaker::default_speed())).unwrap(),
         };
 
-        enqueue(call.lock().await, audio, &self.event_handler.audio_repository).await?;
+        self.observer.enqueue(audio, &self.event_handler.audio_repository).await?;
 
         Ok(())
     }
@@ -238,12 +223,6 @@ where
         if self.should_skip().await? {
             return Ok(());
         };
-
-        let Some(guild_id) = self.message.guild_id else {
-            return Ok(());
-        };
-
-        let call = self.songbird_manager.call(guild_id).await?;
 
         if !self.message.sticker_items.is_empty() {
             self.handle_sticker().await?;
@@ -269,34 +248,47 @@ where
             .unwrap_or(1.2);
 
         if !self.message.content.is_empty() {
-            self.handle_text(call.clone(), speaker.clone(), speed).await?;
+            self.handle_text(speaker.clone(), speed).await?;
         }
 
         if !self.message.attachments.is_empty() {
-            self.handle_attachment(call.clone(), speaker.clone(), speed).await?;
+            self.handle_attachment(speaker.clone(), speed).await?;
         }
 
         Ok(())
     }
 }
 
-pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: Context, message: Message) -> Result<()>
+impl<'a> MessageObserver<'a> {
+    fn new(context: &'a Context, message: &'a Message) -> Self {
+        Self {
+            context,
+            message,
+            songbird_manager: SongbirdManager::new(context),
+        }
+    }
+}
+
+impl<'a> Bot for MessageObserver<'a> {
+    fn context(&self) -> &Context {
+        self.context
+    }
+
+    fn guild_id(&self) -> Option<GuildId> {
+        self.message.guild_id
+    }
+
+    fn songbird_manager(&self) -> &SongbirdManager<'_> {
+        &self.songbird_manager
+    }
+}
+
+pub(crate) async fn handle<Repository>(event_handler: &Handler<Repository>, context: &Context, message: &Message) -> Result<()>
 where
     Repository: AudioRepository<Input = Input> + Send + Sync,
 {
-    let handler = MessageHandler::new(event_handler, &context, &message);
+    let handler = MessageHandler::new(event_handler, context, message);
     handler.handle().await
-}
-
-async fn enqueue(mut call: impl DerefMut<Target = Call>, audio: Audio, audio_repository: &impl AudioRepository<Input = Input>) -> Result<()> {
-    let input = audio_repository
-        .get(audio)
-        .await
-        .context("failed to get audio source")?;
-
-    call.enqueue_input(input).await;
-
-    Ok(())
 }
 
 async fn replace_message<'a>(
