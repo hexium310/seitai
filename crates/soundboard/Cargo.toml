@@ -25,7 +25,7 @@ default-features = false
 features = ["http"]
 
 [dependencies.thiserror]
-version = "2.0.17"
+version = "2.0.18"
 
 [dependencies.url]
 workspace = true
