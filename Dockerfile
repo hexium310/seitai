@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1
-FROM rust:1.92-slim-trixie AS runtime
+FROM rust:1.93-slim-trixie AS runtime
 WORKDIR /usr/src/myapp
 RUN --mount=type=cache,id=api:/var/cache/apt,target=/var/cache/apt \
     --mount=type=cache,id=api:/var/lib/apt/lists,target=/var/lib/apt/lists \
