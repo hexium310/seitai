@@ -43,7 +43,7 @@ workspace = true
 version = "5.1.0"
 
 [dependencies.regex-lite]
-version = "0.1.8"
+version = "0.1.9"
 
 [dependencies.serde]
 workspace = true
