@@ -10,7 +10,7 @@ doctest = false
 workspace = true
 
 [dependencies.futures]
-version = "0.3.31"
+version = "0.3.32"
 
 [dependencies.sea-query]
 version = "0.32.7"
