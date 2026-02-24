@@ -7,7 +7,7 @@ edition = "2024"
 doctest = false
 
 [dependencies.time]
-version = "0.3.45"
+version = "0.3.47"
 features = ["macros"]
 
 [dependencies.tracing-subscriber]
