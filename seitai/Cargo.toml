@@ -14,7 +14,7 @@ features = ["derive"]
 path = "../crates/database"
 
 [dependencies.futures]
-version = "0.3.31"
+version = "0.3.32"
 
 [dependencies.hashbrown]
 version = "0.16.1"
