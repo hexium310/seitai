@@ -3883,8 +3883,9 @@ dependencies = [
 
 [[package]]
 name = "serenity-voice-model"
-version = "0.2.1"
-source = "git+https://github.com/serenity-rs/voice-model.git?branch=next#b1400a1272da4ed259314133b2536006de1850ab"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "910c6511e59df6fa362921e4900cdbd3192210231a2ba135594c480871422af6"
 dependencies = [
  "bitflags 2.8.0",
  "num-traits",
@@ -4014,7 +4015,7 @@ dependencies = [
 [[package]]
 name = "songbird"
 version = "0.5.0"
-source = "git+https://github.com/beerpsi-forks/songbird.git?branch=davey#653177e79f2275516d287861a48e5ff65cb7fa32"
+source = "git+https://github.com/beerpsi-forks/songbird.git?branch=davey#4c5c2b5a258744cc731572edf42bb255e72caace"
 dependencies = [
  "aead",
  "aes-gcm",
