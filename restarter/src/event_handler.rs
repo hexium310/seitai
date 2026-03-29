@@ -22,7 +22,7 @@ impl EventHandler for Handler {
         &'s self,
         context: Context,
         ready: Ready,
-    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'async_trait>>
     where
         Self: 'async_trait,
         's: 'async_trait,
@@ -43,7 +43,7 @@ impl EventHandler for Handler {
         context: Context,
         _old: Option<VoiceState>,
         new: VoiceState,
-    ) -> Pin<Box<(dyn Future<Output = ()> + Send + 'async_trait)>>
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'async_trait>>
     where
         Self: 'async_trait,
         's: 'async_trait,
