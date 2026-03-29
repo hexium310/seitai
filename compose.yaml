@@ -69,7 +69,7 @@ services:
       - 8080:8080
 
   database:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_DB: seitai
       POSTGRES_USER: seitai
@@ -79,7 +79,7 @@ services:
     volumes:
       - type: volume
         source: database
-        target: /var/lib/postgresql/data
+        target: /var/lib/postgresql/18/docker
 
 volumes:
   database:
