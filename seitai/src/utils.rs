@@ -61,7 +61,6 @@ pub(crate) fn normalize<'a>(context: &Context, guild_id: &GuildId, users: &[User
                 .clean_role(true)
                 .clean_user(true)
                 .clean_channel(true)
-                .show_discriminator(false)
                 .display_as_member_from(guild_id)
                 .clean_here(false)
                 .clean_everyone(false);

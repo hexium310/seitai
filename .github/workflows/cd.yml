@@ -15,23 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Set environment variables
         run: |
           ref_name=${{ github.ref_name }}
           echo TARGETS=${ref_name%/*} >> $GITHUB_ENV
           echo VERSION=${ref_name#*/} >> $GITHUB_ENV
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: hexium310
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build image
         id: build
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           push: true
           targets: ${{ env.TARGETS }}
@@ -45,7 +45,7 @@ jobs:
       - build
     steps:
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
       - name: Set up ID token
         uses: actions/github-script@v8
         id: id-token

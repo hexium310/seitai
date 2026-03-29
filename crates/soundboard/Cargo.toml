@@ -6,7 +6,7 @@ edition = "2024"
 doctest = false
 
 [dependencies.reqwest]
-version = "0.12.15"
+version = "0.12.18"
 default-features = false
 features = ["default-tls", "json"]
 
@@ -17,7 +17,7 @@ workspace = true
 workspace = true
 
 [dependencies.serde_with]
-version = "3.15.1"
+version = "3.18.0"
 
 [dependencies.serenity]
 workspace = true
@@ -25,7 +25,7 @@ default-features = false
 features = ["http"]
 
 [dependencies.thiserror]
-version = "2.0.17"
+version = "2.0.18"
 
 [dependencies.url]
 workspace = true
