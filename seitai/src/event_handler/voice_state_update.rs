@@ -116,7 +116,7 @@ where
         let members = channel
             .members(&self.context.cache)
             .with_context(|| format!("failed to get members in channel {}", channel.id))?;
-        let is_alone = members.iter().map(|v| v.user.id).eq([self.observer.id().await?].into_iter());
+        let is_alone = members.iter().map(|v| v.user.id).eq([self.observer.id().await?]);
 
         if is_alone {
             let call = self.observer.call().await?;
