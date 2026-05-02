@@ -313,7 +313,7 @@ async fn replace_message<'a>(
     ];
 
     let text = utils::normalize(context, &guild_id, &message.mentions, &message.content);
-    stream::iter(replacements.into_iter())
+    stream::iter(replacements)
         .fold(text, |accumulator, replacement| async move {
             match replacement {
                 Replacement::General(regex, replacer) => match regex.replace_all(&accumulator, replacer) {
