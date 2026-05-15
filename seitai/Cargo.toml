@@ -17,7 +17,7 @@ path = "../crates/database"
 version = "0.3.32"
 
 [dependencies.hashbrown]
-version = "0.17.0"
+version = "0.17.1"
 
 [dependencies.http-body-util]
 workspace = true
