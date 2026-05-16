@@ -23,7 +23,7 @@ impl AudioProcessor for SongbirdAudioProcessor {
     type Raw = Bytes;
 
     async fn compress(&self, raw: Self::Raw) -> Result<Self::Compressed> {
-        let compressed = Compressed::new(raw.into(), Bitrate::BitsPerSecond(128_000)).await?;
+        let compressed = Compressed::new(raw.into(), Bitrate::Bits(128_000)).await?;
         let _ = compressed.raw.spawn_loader();
 
         Ok(compressed)
