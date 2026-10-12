@@ -12,7 +12,7 @@ rules:
   - apiGroups:
       - apps
     resources:
-      - statefulsets
+      - deployment
     verbs:
       - get
       - patch
@@ -40,7 +40,7 @@ rules:
     resourceNames:
       - seitai
     resources:
-      - statefulsets
+      - deployment
     verbs:
       - get
       - patch
