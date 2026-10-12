@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voicevox
+spec:
+  selector:
+    matchLabels:
+      app: voicevox
+  template:
+    metadata:
+      labels:
+        app: voicevox
+    spec:
+      containers:
+        - name: voicevox
+          image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.18.1
+          ports:
+            - containerPort: 50021
+          resources:
+            requests:
+              memory: 1.25Gi
+          volumeMounts:
+            - name: voicevox-dictionary
+              mountPath: /home/user/.local/share/voicevox-engine-dev/
+      volumes:
+        - name: voicevox-dictionary
+          persistentVolumeClaim:
+            claimName: voicevox-dictionary
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch

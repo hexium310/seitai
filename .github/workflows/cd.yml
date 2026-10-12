@@ -61,4 +61,4 @@ jobs:
           kubectl config use-context k8s.chitoku.jp
       - name: Rollout restart
         run: |
-          kubectl rollout restart statefulset/seitai
+          kubectl rollout restart deployment/seitai

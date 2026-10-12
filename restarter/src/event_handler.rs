@@ -2,7 +2,7 @@ use std::{pin::Pin, sync::Arc};
 
 use anyhow::{bail, Result};
 use futures::lock::Mutex;
-use k8s_openapi::api::apps::v1::StatefulSet;
+use k8s_openapi::api::apps::v1::Deployment;
 use kube::{Api, Client, Config};
 use serenity::{
     all::VoiceState,
@@ -94,13 +94,13 @@ async fn wait_restart(context: &Context) {
         tokio::select! {
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(300)) => {
                 if let Err(error) = restart().await {
-                    tracing::error!("failed to restart statefulsets/voicevox\nError: {error:?}");
+                    tracing::error!("failed to restart deployment/voicevox\nError: {error:?}");
                     return;
                 }
-                tracing::info!("succeeded in restarting statefulsets/voicevox");
+                tracing::info!("succeeded in restarting deployment/voicevox");
             },
             _ = cancellation.notified() => {
-                tracing::info!("canceled restarting statefulsets/voicevox");
+                tracing::info!("canceled restarting deployment/voicevox");
             },
         }
     });
@@ -114,8 +114,8 @@ async fn restart() -> Result<()> {
         },
     };
     let client = Client::try_from(config)?;
-    let stateful_sets: Api<StatefulSet> = Api::default_namespaced(client);
-    stateful_sets.restart("voicevox").await?;
+    let deployment: Api<Deployment> = Api::default_namespaced(client);
+    deployment.restart("voicevox").await?;
 
     Ok(())
 }
