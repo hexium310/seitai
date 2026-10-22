@@ -1997,7 +1997,7 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4127,9 +4127,9 @@ dependencies = [
 
 [[package]]
 name = "songbird"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b9bf4ecb5083685b79a8fc60222f12e4f036e2817c5c341cd2b9ff2b429d237"
+checksum = "371362adce10df3244fbf93475ac53391aedd425482f160a9dbb3e042577de8b"
 dependencies = [
  "aead",
  "aes-gcm",
