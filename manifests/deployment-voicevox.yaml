@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: voicevox
-          image: voicevox/voicevox_engine:cpu-ubuntu20.04-0.18.1
+          image: voicevox/voicevox_engine:cpu-0.26.0
           ports:
             - containerPort: 50021
           resources:
@@ -21,7 +21,7 @@ spec:
               memory: 1.25Gi
           volumeMounts:
             - name: voicevox-dictionary
-              mountPath: /home/user/.local/share/voicevox-engine-dev/
+              mountPath: /home/user/.local/share/voicevox-engine/
       volumes:
         - name: voicevox-dictionary
           persistentVolumeClaim:
