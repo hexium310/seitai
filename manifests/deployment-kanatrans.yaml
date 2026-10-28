@@ -24,3 +24,14 @@ spec:
               value: kanatrans=info,tower_http=trace
             - name: NO_COLOR
               value: '1'
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault

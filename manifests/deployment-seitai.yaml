@@ -33,6 +33,12 @@ spec:
                 secretKeyRef:
                   name: seitai.seitai-database.credentials.postgresql.acid.zalan.do
                   key: password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
       containers:
         - name: seitai
           image: ghcr.io/hexium310/seitai
@@ -62,6 +68,12 @@ spec:
                 secretKeyRef:
                   name: seitai.seitai-database.credentials.postgresql.acid.zalan.do
                   key: password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
         - name: restarter
           image: ghcr.io/hexium310/restarter
           imagePullPolicy: Always
@@ -73,4 +85,15 @@ spec:
                 secretKeyRef:
                   name: seitai-secret
                   key: token
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
       serviceAccountName: restarter
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
