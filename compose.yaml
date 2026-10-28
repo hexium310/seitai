@@ -1,31 +1,34 @@
 services:
   voicevox:
+    image: voicevox/voicevox_engine:cpu-0.26.0
     ports:
       - 50021:50021
-    image: voicevox/voicevox_engine:cpu-0.26.0
+    # Removes gosu to run container as unprivileged user
+    # original: https://github.com/VOICEVOX/voicevox_engine/blob/0.26.0/Dockerfile#L89-L97
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        cat /opt/voicevox_engine/README.md > /dev/stderr
+        /opt/voicevox_engine/run
+    # Cannot mount the named volume as user/group for now, so mounts tmpfs instead temporarily.
+    # ref: https://github.com/moby/moby/issues/2259#issuecomment-5914299524
+    tmpfs:
+      - /home/user/.local/share/voicevox-engine:rw,gid=1001,mode=2775
+    volumes:
+      - type: tmpfs
+        target: /tmp
+    user: '1001:1001'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
 
   seitai:
     build:
       context: .
       target: development
-    tty: true
-    volumes:
-      - type: bind
-        source: Cargo.lock
-        target: /usr/src/myapp/Cargo.lock
-      - type: bind
-        source: Cargo.toml
-        target: /usr/src/myapp/Cargo.toml
-      - type: bind
-        source: crates
-        target: /usr/src/myapp/crates
-      - type: bind
-        source: seitai
-        target: /usr/src/myapp/seitai
-      - type: bind
-        source: restarter
-        target: /usr/src/myapp/restarter
-    command: /bin/sh -c 'cargo run -p seitai'
     environment:
       DISCORD_TOKEN:
       VOICEVOX_HOST: voicevox
@@ -35,30 +38,27 @@ services:
       PGDATABASE: seitai
       PGUSER: seitai
       PGPASSWORD: seitai
+    entrypoint: seitai
+    user: '65532'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+
   restarter:
     build:
       context: .
       target: development
-    tty: true
-    volumes:
-      - type: bind
-        source: Cargo.lock
-        target: /usr/src/myapp/Cargo.lock
-      - type: bind
-        source: Cargo.toml
-        target: /usr/src/myapp/Cargo.toml
-      - type: bind
-        source: crates
-        target: /usr/src/myapp/crates
-      - type: bind
-        source: seitai
-        target: /usr/src/myapp/seitai
-      - type: bind
-        source: restarter
-        target: /usr/src/myapp/restarter
-    command: /bin/sh -c 'cargo run -p restarter'
     environment:
       DISCORD_TOKEN:
+    entrypoint: restarter
+    user: '65532'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
 
   kanatrans:
     image: ghcr.io/hexium310/kanatrans
@@ -67,6 +67,12 @@ services:
       RUST_LOG: kanatrans=info
     ports:
       - 8080:8080
+    user: '65532'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
 
   database:
     image: postgres:18
@@ -80,7 +86,21 @@ services:
       - type: volume
         source: database
         target: /var/lib/postgresql/18/docker
+      - type: tmpfs
+        target: /var/run/postgresql
+      - type: tmpfs
+        target: /tmp
+    user: '999'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
 
 volumes:
   database:
+    driver: local
+  seitai-cargo-cache:
+    driver: local
+  restarter-cargo-cache:
     driver: local

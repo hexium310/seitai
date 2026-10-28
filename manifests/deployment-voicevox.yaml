@@ -16,16 +16,40 @@ spec:
           image: voicevox/voicevox_engine:cpu-0.26.0
           ports:
             - containerPort: 50021
+          # Removes gosu to run container as unprivileged user
+          # original: https://github.com/VOICEVOX/voicevox_engine/blob/0.26.0/Dockerfile#L89-L97
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              cat /opt/voicevox_engine/README.md > /dev/stderr
+              /opt/voicevox_engine/run
           resources:
             requests:
               memory: 1.25Gi
           volumeMounts:
             - name: voicevox-dictionary
               mountPath: /home/user/.local/share/voicevox-engine/
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
       volumes:
         - name: voicevox-dictionary
           persistentVolumeClaim:
             claimName: voicevox-dictionary
+        - name: tmp
+          emptyDir: {}
       securityContext:
-        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 1001
         fsGroupChangePolicy: OnRootMismatch

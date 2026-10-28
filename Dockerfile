@@ -10,6 +10,14 @@ RUN --mount=type=cache,id=api:/var/cache/apt,target=/var/cache/apt \
     && rm -rf /var/lib/apt/lists/*
 
 FROM runtime AS development
+RUN --mount=type=bind,source=crates,target=crates \
+    --mount=type=bind,source=restarter,target=restarter \
+    --mount=type=bind,source=seitai,target=seitai \
+    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
+    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
+    --mount=type=cache,target=/usr/src/myapp/target \
+    cargo build --workspace && \
+    cp target/debug/seitai target/debug/restarter /usr/local/bin/
 
 FROM runtime AS builder
 RUN --mount=type=bind,source=crates,target=crates \
