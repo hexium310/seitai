@@ -3,12 +3,16 @@ services:
     image: voicevox/voicevox_engine:cpu-0.26.0
     ports:
       - 50021:50021
+    # Removes gosu to run container as unprivileged user
+    # original: https://github.com/VOICEVOX/voicevox_engine/blob/0.26.0/Dockerfile#L89-L97
     entrypoint: /bin/sh
     command:
       - -c
       - |
         cat /opt/voicevox_engine/README.md > /dev/stderr
         /opt/voicevox_engine/run
+    # Cannot mount the named volume as user/group for now, so mounts tmpfs instead temporarily.
+    # ref: https://github.com/moby/moby/issues/2259#issuecomment-5914299524
     tmpfs:
       - /home/user/.local/share/voicevox-engine:rw,gid=1001,mode=2775
     volumes:
