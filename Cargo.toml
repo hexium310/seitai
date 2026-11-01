@@ -36,7 +36,7 @@ version = "1.52.3"
 features = ["macros", "net", "rt-multi-thread", "signal"]
 
 [workspace.dependencies.tracing]
-version = "0.1.41"
+version = "0.1.44"
 
 [workspace.dependencies.url]
 version = "2.5.8"
