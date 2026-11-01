@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v4.4.1
       - name: Set environment variables
         run: |
           ref_name=${{ github.ref_name }}
@@ -31,7 +31,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build image
         id: build
-        uses: docker/bake-action@v7
+        uses: docker/bake-action@v7.5.0
         with:
           push: true
           targets: ${{ env.TARGETS }}
@@ -45,9 +45,9 @@ jobs:
       - build
     steps:
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v5
+        uses: azure/setup-kubectl@v5.2.0
       - name: Set up ID token
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         id: id-token
         with:
           result-encoding: string
