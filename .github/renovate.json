@@ -5,6 +5,10 @@
     "github>hexium310/renovate-config",
     "github>hexium310/renovate-config:labels"
   ],
+  "commitMessageAction": "Bump",
+  "commitMessageExtra": "from {{currentVersion}} to {{newVersion}}",
+  "commitMessageTopic": "{{#if isGroup}}the {{groupName}} group{{else}}{{depName}}{{/if}}",
+  "commitMessageSuffix": "{{#if isGroup}}with {{upgrades.length}} updates{{/if}}",
   "packageRules": [
     {
       "groupName": "Kubernetes",
