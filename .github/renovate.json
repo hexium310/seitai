@@ -12,7 +12,8 @@
       "matchPackageNames": [
         "kube",
         "k8s-openapi"
-      ]
+      ],
+      "separateMajorMinor": false
     },
     {
       "groupName": "sqlx",
@@ -20,7 +21,8 @@
       "matchPackageNames": [
         "sea-query*",
         "sqlx*"
-      ]
+      ],
+      "separateMajorMinor": false
     }
   ]
 }
