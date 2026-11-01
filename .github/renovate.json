@@ -15,10 +15,11 @@
       ]
     },
     {
-      "groupName": "sea-query",
+      "groupName": "sqlx",
       "matchManagers": "cargo",
       "matchPackageNames": [
-        "sea-query*"
+        "sea-query*",
+        "sqlx*"
       ]
     }
   ]
