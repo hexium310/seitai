@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "github>hexium310/renovate-config",
+    "github>hexium310/renovate-config:labels"
+  ],
+  "packageRules": [
+    {
+      "groupName": "Kubernetes",
+      "matchManagers": "cargo",
+      "matchPackageNames": [
+        "kube",
+        "k8s-openapi"
+      ]
+    },
+    {
+      "groupName": "sea-query",
+      "matchManagers": "cargo",
+      "matchPackageNames": [
+        "sea-query*"
+      ]
+    }
+  ]
+}
