@@ -17,10 +17,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - name: Set up rust-toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
