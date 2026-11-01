@@ -14,7 +14,7 @@ version = "1.10.1"
 features = ["client", "http1"]
 
 [workspace.dependencies.hyper-util]
-version = "0.1.20"
+version = "0.1.21"
 features = ["client", "client-legacy", "http1", "tokio"]
 
 [workspace.dependencies.logging]
