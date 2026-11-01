@@ -33,7 +33,7 @@ version = "2.14.0"
 features = ["serde"]
 
 [dependencies.lazy-regex]
-version = "3.6.0"
+version = "3.6.2"
 features = ["lite"]
 
 [dependencies.logging]
