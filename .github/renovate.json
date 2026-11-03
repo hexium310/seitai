@@ -17,6 +17,7 @@
         "kube",
         "k8s-openapi"
       ],
+      "minimumGroupSize": 2,
       "separateMajorMinor": false
     },
     {
