@@ -5,6 +5,10 @@
     "github>hexium310/renovate-config",
     "github>hexium310/renovate-config:labels"
   ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 0-5 * * 3"]
+  },
   "packageRules": [
     {
       "groupName": "kubernetes",
