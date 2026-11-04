@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use anyhow::Result;
 use futures::TryStreamExt;
 use sea_query::{Alias, Expr, ExprTrait, Iden, OnConflict, PostgresQueryBuilder, Query};
-use sea_query_binder::SqlxBinder;
+use sea_query_sqlx::SqlxBinder;
 use sqlx::{AssertSqlSafe, PgPool, Row, postgres::PgRow, prelude::FromRow};
 use uuid::Uuid;
 

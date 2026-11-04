@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use futures::TryStreamExt;
 use sea_query::{Expr, ExprTrait, Iden, JoinType, OnConflict, PostgresQueryBuilder, Query};
-use sea_query_binder::SqlxBinder;
+use sea_query_sqlx::SqlxBinder;
 use sqlx::{AssertSqlSafe, FromRow, PgPool};
 
 use crate::speaker::DatabaseSpeaker;

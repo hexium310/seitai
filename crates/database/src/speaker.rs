@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use anyhow::{Error, Result};
 use sea_query::{Iden, OnConflict, PostgresQueryBuilder, Query};
-use sea_query_binder::SqlxBinder;
+use sea_query_sqlx::SqlxBinder;
 use sqlx::{AssertSqlSafe, FromRow, PgPool};
 
 #[derive(Iden)]

@@ -17,8 +17,8 @@ version = "1.0.2"
 default-features = false
 features = ["backend-postgres", "derive", "thread-safe", "with-uuid"]
 
-[dependencies.sea-query-binder]
-version = "0.7.0"
+[dependencies.sea-query-sqlx]
+version = "0.9.1"
 features = ["sqlx-postgres", "with-uuid"]
 
 [dependencies.serde_with]
