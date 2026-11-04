@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use sqlx::Postgres;
 use sqlx_migrator::{Info, migrator, vec_box};
 
@@ -18,10 +16,8 @@ impl Default for Migrator {
     }
 }
 
-impl Deref for Migrator {
-    type Target = migrator::Migrator<Postgres>;
-
-    fn deref(&self) -> &Self::Target {
+impl AsRef<migrator::Migrator<Postgres>> for Migrator {
+    fn as_ref(&self) -> &migrator::Migrator<Postgres> {
         &self.inner
     }
 }
@@ -35,9 +31,5 @@ impl Migrator {
         )).expect("failed to add migrations to migrator");
 
         Self { inner: migrator }
-    }
-
-    pub fn into_boxed_inner(self) -> Box<migrator::Migrator<Postgres>> {
-        Box::new(self.inner)
     }
 }

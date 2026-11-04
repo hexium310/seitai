@@ -40,7 +40,7 @@ impl Application {
 
         #[allow(irrefutable_let_patterns)]
         if let Subcommand::Migration(migration) = cli.subcommand {
-            migration.run(&mut *pgpool.acquire().await?, migrator.into_boxed_inner()).await?;
+            migration.run(&mut *pgpool.acquire().await?, migrator.as_ref()).await?;
             process::exit(0);
         }
 
