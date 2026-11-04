@@ -13,7 +13,7 @@ workspace = true
 version = "0.3.34"
 
 [dependencies.sea-query]
-version = "0.32.7"
+version = "1.0.2"
 default-features = false
 features = ["backend-postgres", "derive", "thread-safe", "with-uuid"]
 
@@ -25,12 +25,12 @@ features = ["sqlx-postgres", "with-uuid"]
 version = "3.24.0"
 
 [dependencies.sqlx]
-version = "0.8.6"
+version = "0.9.0"
 default-features = false
 features = ["postgres", "runtime-tokio", "tls-native-tls", "uuid"]
 
 [dependencies.sqlx_migrator]
-version = "0.18.0"
+version = "0.20.0"
 features = ["postgres"]
 
 [dependencies.serde]
