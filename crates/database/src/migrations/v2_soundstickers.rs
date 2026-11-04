@@ -1,5 +1,15 @@
 use futures::future::BoxFuture;
-use sea_query::{ColumnDef, Expr, ForeignKey, ForeignKeyAction, Index, PgFunc, PostgresQueryBuilder, Table};
+use sea_query::{
+    ColumnDef,
+    Expr,
+    ExprTrait,
+    ForeignKey,
+    ForeignKeyAction,
+    Index,
+    PgFunc,
+    PostgresQueryBuilder,
+    Table,
+};
 use sqlx::{AssertSqlSafe, PgConnection, Postgres};
 use sqlx_migrator::{operation::Operation, vec_box};
 

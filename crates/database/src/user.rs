@@ -1,6 +1,6 @@
 use anyhow::{Error, Result};
 use futures::TryStreamExt;
-use sea_query::{Expr, Iden, JoinType, OnConflict, PostgresQueryBuilder, Query};
+use sea_query::{Expr, ExprTrait, Iden, JoinType, OnConflict, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
 use sqlx::{AssertSqlSafe, FromRow, PgPool};
 
