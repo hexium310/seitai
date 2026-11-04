@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 use futures::TryStreamExt;
 use sea_query::{Expr, Iden, JoinType, OnConflict, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
-use sqlx::{FromRow, PgPool};
+use sqlx::{AssertSqlSafe, FromRow, PgPool};
 
 use crate::speaker::DatabaseSpeaker;
 
@@ -56,7 +56,7 @@ pub async fn create(database: &PgPool, user_id: u64, speaker_id: u16) -> Result<
         .returning(Query::returning().columns([DatabaseUser::Id, DatabaseUser::SpeakerId]))
         .build_sqlx(PostgresQueryBuilder);
 
-    sqlx::query_as_with::<_, User, _>(&sql, values)
+    sqlx::query_as_with::<_, User, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch_one(&mut *database.acquire().await?)
         .await
         .map_err(Error::msg)
@@ -69,7 +69,7 @@ pub async fn fetch_by_ids(database: &PgPool, ids: &[i64]) -> Result<Vec<User>> {
         .and_where(Expr::col(DatabaseUser::Id).is_in(ids.iter().cloned()))
         .build_sqlx(PostgresQueryBuilder);
 
-    sqlx::query_as_with::<_, User, _>(&sql, values)
+    sqlx::query_as_with::<_, User, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch(&mut *database.acquire().await?)
         .try_collect()
         .await
@@ -93,7 +93,7 @@ pub async fn fetch_with_speaker_by_ids(database: &PgPool, ids: &[i64]) -> Result
         .and_where(Expr::col((DatabaseUser::Table, DatabaseUser::Id)).is_in(ids.iter().cloned()))
         .build_sqlx(PostgresQueryBuilder);
 
-    sqlx::query_as_with::<_, UserSpeaker, _>(&sql, values)
+    sqlx::query_as_with::<_, UserSpeaker, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch(&mut *database.acquire().await?)
         .try_collect()
         .await

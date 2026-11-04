@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use anyhow::{Error, Result};
 use sea_query::{Iden, OnConflict, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
-use sqlx::{FromRow, PgPool};
+use sqlx::{AssertSqlSafe, FromRow, PgPool};
 
 #[derive(Iden)]
 pub(crate) enum DatabaseSpeaker {
@@ -37,7 +37,7 @@ where
         .returning(Query::returning().columns([DatabaseSpeaker::Id, DatabaseSpeaker::Speed]))
         .build_sqlx(PostgresQueryBuilder);
 
-    sqlx::query_as_with::<_, Speaker, _>(&sql, values)
+    sqlx::query_as_with::<_, Speaker, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch_one(&mut *database.acquire().await?)
         .await
         .map_err(Error::msg)

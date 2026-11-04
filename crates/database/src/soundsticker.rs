@@ -4,7 +4,7 @@ use anyhow::Result;
 use futures::TryStreamExt;
 use sea_query::{Alias, Expr, Iden, OnConflict, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
-use sqlx::{postgres::PgRow, prelude::FromRow, PgPool, Row};
+use sqlx::{AssertSqlSafe, PgPool, Row, postgres::PgRow, prelude::FromRow};
 use uuid::Uuid;
 
 use crate::{sound::{DatabaseSound, DatabaseSoundRow}, sticker::{DatabaseSticker, DatabaseStickerRow}};
@@ -83,7 +83,7 @@ pub async fn create(
         ]))
         .build_sqlx(PostgresQueryBuilder);
 
-    let sound_row = match sqlx::query_as_with::<_, DatabaseSoundRow, _>(&sql, values)
+    let sound_row = match sqlx::query_as_with::<_, DatabaseSoundRow, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch_one(&mut *tx)
         .await
     {
@@ -111,7 +111,7 @@ pub async fn create(
         ]))
         .build_sqlx(PostgresQueryBuilder);
 
-    let sticker_row = match sqlx::query_as_with::<_, DatabaseStickerRow, _>(&sql, values)
+    let sticker_row = match sqlx::query_as_with::<_, DatabaseStickerRow, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch_one(&mut *tx)
         .await
     {
@@ -137,7 +137,7 @@ pub async fn create(
         ]))
         .build_sqlx(PostgresQueryBuilder);
 
-    let soundsticker_row = match sqlx::query_as_with::<_, DatabaseSoundstickerRow, _>(&sql, values)
+    let soundsticker_row = match sqlx::query_as_with::<_, DatabaseSoundstickerRow, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch_one(&mut *tx)
         .await
     {
@@ -190,7 +190,7 @@ where
         .and_where(Expr::col((DatabaseSticker::Table, DatabaseSticker::StickerId)).is_in(sticker_ids))
         .build_sqlx(PostgresQueryBuilder);
 
-    match sqlx::query_as_with::<_, Soundsticker, _>(&sql, values)
+    match sqlx::query_as_with::<_, Soundsticker, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch(&mut *database.acquire().await?)
         .map_ok(Into::into)
         .try_collect()
@@ -227,7 +227,7 @@ pub async fn fetch_all(database: &PgPool) -> Result<Vec<Soundsticker>> {
         )
         .build_sqlx(PostgresQueryBuilder);
 
-    match sqlx::query_as_with::<_, Soundsticker, _>(&sql, values)
+    match sqlx::query_as_with::<_, Soundsticker, _>(AssertSqlSafe(sql.as_str()), values)
         .fetch(&mut *database.acquire().await?)
         .map_ok(Into::into)
         .try_collect()
@@ -255,7 +255,7 @@ pub async fn delete_by_id(database: &PgPool, id: u64) -> Result<Option<Soundstic
         .and_where(Expr::col(DatabaseSoundsticker::Id).eq(soundsticker.id))
         .build_sqlx(PostgresQueryBuilder);
 
-    if let Err(err) = sqlx::query_with(&sql, values).execute(&mut *database.acquire().await?).await {
+    if let Err(err) = sqlx::query_with(AssertSqlSafe(sql.as_str()), values).execute(&mut *database.acquire().await?).await {
         tracing::error!("failed to get soundsticker\nError: {err:?}");
         return Err(err.into());
     };

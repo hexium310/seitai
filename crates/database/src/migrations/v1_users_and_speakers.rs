@@ -1,6 +1,6 @@
 use futures::future::BoxFuture;
 use sea_query::{ColumnDef, Index, PostgresQueryBuilder, Table};
-use sqlx::{PgConnection, Postgres};
+use sqlx::{AssertSqlSafe, PgConnection, Postgres};
 use sqlx_migrator::{operation::Operation, vec_box};
 
 use crate::{speaker::DatabaseSpeaker, user::DatabaseUser};
@@ -25,7 +25,7 @@ impl Operation<Postgres> for CreateTableOperation {
                 .col(ColumnDef::new(DatabaseUser::SpeakerId).integer().not_null())
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Table::create()
                 .if_not_exists()
@@ -34,7 +34,7 @@ impl Operation<Postgres> for CreateTableOperation {
                 .col(ColumnDef::new(DatabaseSpeaker::Speed).float())
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
@@ -51,13 +51,13 @@ impl Operation<Postgres> for CreateTableOperation {
                 .table(DatabaseUser::Table)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Table::drop()
                 .table(DatabaseSpeaker::Table)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
@@ -79,7 +79,7 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .col(DatabaseUser::Id)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Index::create()
                 .if_not_exists()
@@ -88,7 +88,7 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .col(DatabaseSpeaker::Id)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
@@ -105,13 +105,13 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .name("users_id_idx")
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Index::drop()
                 .name("speakers_id_idx")
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })

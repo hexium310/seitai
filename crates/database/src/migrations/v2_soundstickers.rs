@@ -1,6 +1,6 @@
 use futures::future::BoxFuture;
 use sea_query::{ColumnDef, Expr, ForeignKey, ForeignKeyAction, Index, PgFunc, PostgresQueryBuilder, Table};
-use sqlx::{PgConnection, Postgres};
+use sqlx::{AssertSqlSafe, PgConnection, Postgres};
 use sqlx_migrator::{operation::Operation, vec_box};
 
 use crate::{sound::DatabaseSound, soundsticker::DatabaseSoundsticker, sticker::DatabaseSticker};
@@ -33,7 +33,7 @@ impl Operation<Postgres> for CreateTableOperation {
                 .col(ColumnDef::new(DatabaseSound::GuildId).big_integer().check(Expr::col(DatabaseSound::GuildId).gt(0)))
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Table::create()
                 .if_not_exists()
@@ -50,7 +50,7 @@ impl Operation<Postgres> for CreateTableOperation {
                 .col(ColumnDef::new(DatabaseSticker::GuildId).big_integer().check(Expr::col(DatabaseSticker::GuildId).gt(0)))
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Table::create()
                 .if_not_exists()
@@ -77,7 +77,7 @@ impl Operation<Postgres> for CreateTableOperation {
                 )
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
@@ -96,7 +96,7 @@ impl Operation<Postgres> for CreateTableOperation {
                 .table(DatabaseSound::Table)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
@@ -118,7 +118,7 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .col(DatabaseSoundsticker::StickerId)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Index::create()
                 .if_not_exists()
@@ -127,7 +127,7 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .col(DatabaseSoundsticker::StickerId)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Index::create()
                 .if_not_exists()
@@ -136,7 +136,7 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .col(DatabaseSoundsticker::StickerId)
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
@@ -153,19 +153,19 @@ impl Operation<Postgres> for CreateIndexOperation {
                 .name("sounds_sound_id_idx")
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Index::drop()
                 .name("stickers_sticker_id_idx")
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             let sql = Index::drop()
                 .name("soundstickers_sticker_id_idx")
                 .build(PostgresQueryBuilder);
 
-            sqlx::query(&sql).execute(&mut *connection).await?;
+            sqlx::query(AssertSqlSafe(sql.as_str())).execute(&mut *connection).await?;
 
             Ok(())
         })
