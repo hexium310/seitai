@@ -5,6 +5,7 @@ use futures::TryStreamExt;
 use sea_query::{Alias, Expr, ExprTrait, Iden, OnConflict, PostgresQueryBuilder, Query};
 use sea_query_sqlx::SqlxBinder;
 use sqlx::{AssertSqlSafe, PgPool, Row, postgres::PgRow, prelude::FromRow};
+use strum::AsRefStr;
 use uuid::Uuid;
 
 use crate::{sound::{DatabaseSound, DatabaseSoundRow}, sticker::{DatabaseSticker, DatabaseStickerRow}};
@@ -15,6 +16,13 @@ pub(crate) enum DatabaseSoundsticker {
     Table,
     Id,
     StickerId,
+    SoundId,
+}
+
+#[derive(AsRefStr)]
+#[strum(serialize_all = "snake_case", prefix = "soundstickers_", suffix = "_idx")]
+pub(crate) enum DatabaseSoundstickerIndex {
+    // For foreign key
     SoundId,
 }
 
@@ -35,6 +43,12 @@ pub struct Soundsticker {
     pub sound_name: String,
     pub sound_id: u64,
     pub sound_guild_id: Option<u64>,
+}
+
+impl From<DatabaseSoundstickerIndex> for String {
+    fn from(val: DatabaseSoundstickerIndex) -> Self {
+        val.as_ref().into()
+    }
 }
 
 impl FromRow<'_, PgRow> for Soundsticker {

@@ -31,6 +31,10 @@ version = "1.0.154"
 version = "0.12.5"
 default-features = false
 
+[workspace.dependencies.strum]
+features = ["derive"]
+version = "0.28.0"
+
 [workspace.dependencies.tokio]
 version = "1.54.1"
 features = ["macros", "net", "rt-multi-thread", "signal"]
