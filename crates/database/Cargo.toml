@@ -21,6 +21,9 @@ features = ["backend-postgres", "derive", "thread-safe", "with-uuid"]
 version = "0.9.1"
 features = ["sqlx-postgres", "with-uuid"]
 
+[dependencies.serde]
+workspace = true
+
 [dependencies.serde_with]
 version = "3.24.0"
 
@@ -33,7 +36,7 @@ features = ["postgres", "runtime-tokio", "tls-native-tls", "uuid"]
 version = "0.20.0"
 features = ["postgres"]
 
-[dependencies.serde]
+[dependencies.strum]
 workspace = true
 
 [dependencies.tracing]

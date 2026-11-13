@@ -64,8 +64,7 @@ features = ["builtin-queue", "driver", "gateway", "native", "serenity", "tungste
 path = "../crates/soundboard"
 
 [dependencies.strum]
-features = ["derive"]
-version = "0.28.0"
+workspace = true
 
 [dependencies.symphonia]
 version = "0.5"

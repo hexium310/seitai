@@ -5,6 +5,7 @@ pub use sqlx_migrator::MigrationCommand;
 
 pub mod v1_users_and_speakers;
 pub mod v2_soundstickers;
+pub mod v3_soundstickers_index_fix;
 
 pub struct Migrator {
     inner: migrator::Migrator<Postgres>,
@@ -28,6 +29,7 @@ impl Migrator {
         migrator.add_migrations(vec_box!(
             v1_users_and_speakers::V1Migration,
             v2_soundstickers::V2Migration,
+            v3_soundstickers_index_fix::V3Migration,
         )).expect("failed to add migrations to migrator");
 
         Self { inner: migrator }
