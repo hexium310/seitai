@@ -3,7 +3,7 @@ use sea_query::{Index, PostgresQueryBuilder};
 use sqlx::{AssertSqlSafe, PgConnection, Postgres};
 use sqlx_migrator::{operation::Operation, vec_box};
 
-use crate::soundsticker::{DatabaseSoundsticker, DatabaseSoundstickerIndex};
+use crate::{migrations::v2_soundstickers, soundsticker::{DatabaseSoundsticker, DatabaseSoundstickerIndex}};
 
 struct CreateIndexOperation;
 
@@ -126,7 +126,9 @@ sqlx_migrator::migration!(
     V3Migration,
     "seitai",
     "fix soundstickers index",
-    vec_box![],
+    vec_box![
+        v2_soundstickers::V2Migration,
+    ],
     vec_box![
         CreateIndexOperation,
         DeleteIndexOperation,
