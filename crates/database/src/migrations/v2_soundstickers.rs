@@ -13,7 +13,12 @@ use sea_query::{
 use sqlx::{AssertSqlSafe, PgConnection, Postgres};
 use sqlx_migrator::{operation::Operation, vec_box};
 
-use crate::{sound::DatabaseSound, soundsticker::DatabaseSoundsticker, sticker::DatabaseSticker};
+use crate::{
+    migrations::v1_users_and_speakers,
+    sound::DatabaseSound,
+    soundsticker::DatabaseSoundsticker,
+    sticker::DatabaseSticker,
+};
 
 pub(crate) struct CreateTableOperation;
 pub(crate) struct CreateIndexOperation;
@@ -187,7 +192,9 @@ sqlx_migrator::migration!(
     V2Migration,
     "seitai",
     "create soundstickers",
-    vec_box![],
+    vec_box![
+        v1_users_and_speakers::V1Migration,
+    ],
     vec_box![
         CreateTableOperation,
         CreateIndexOperation,

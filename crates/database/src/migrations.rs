@@ -1,5 +1,5 @@
 use sqlx::Postgres;
-use sqlx_migrator::{Info, migrator, vec_box};
+use sqlx_migrator::{migrator, vec_box};
 
 pub use sqlx_migrator::MigrationCommand;
 
@@ -25,7 +25,7 @@ impl AsRef<migrator::Migrator<Postgres>> for Migrator {
 
 impl Migrator {
     pub fn new() -> Self {
-        let mut migrator = migrator::Migrator::new();
+        let mut migrator = migrator::Migrator::default();
         migrator.add_migrations(vec_box!(
             v1_users_and_speakers::V1Migration,
             v2_soundstickers::V2Migration,
