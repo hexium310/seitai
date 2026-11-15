@@ -11,6 +11,11 @@
   },
   "packageRules": [
     {
+      "groupName": "rust",
+      "matchPackageNames": ["rust"],
+      "minimumGroupSize": 2
+    },
+    {
       "groupName": "kubernetes",
       "matchManagers": "cargo",
       "matchPackageNames": [
