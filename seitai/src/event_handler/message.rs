@@ -120,11 +120,7 @@ where
             .any(|user| self.message.author == user);
 
         // Skip when message author isn't voice channel member
-        if !is_authored_by_voice_channel_member {
-            return Ok(true);
-        }
-
-        Ok(false)
+        Ok(!is_authored_by_voice_channel_member)
     }
 
     async fn handle_sticker(&self) -> Result<()> {
