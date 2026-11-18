@@ -1,11 +1,11 @@
 use sqlx::Postgres;
-use sqlx_migrator::{migrator, vec_box};
+use sqlx_migrator::migrator;
 
 pub use sqlx_migrator::MigrationCommand;
 
-pub mod v1_users_and_speakers;
-pub mod v2_soundstickers;
-pub mod v3_soundstickers_index_fix;
+mod v1_users_and_speakers;
+mod v2_soundstickers;
+mod v3_soundstickers_index_fix;
 
 pub struct Migrator {
     inner: migrator::Migrator<Postgres>,
@@ -26,11 +26,9 @@ impl AsRef<migrator::Migrator<Postgres>> for Migrator {
 impl Migrator {
     pub fn new() -> Self {
         let mut migrator = migrator::Migrator::default();
-        migrator.add_migrations(vec_box!(
-            v1_users_and_speakers::V1Migration,
-            v2_soundstickers::V2Migration,
-            v3_soundstickers_index_fix::V3Migration,
-        )).expect("failed to add migrations to migrator");
+        migrator
+            .add_migration(Box::new(v3_soundstickers_index_fix::V3Migration))
+            .expect("failed to add migrations to migrator");
 
         Self { inner: migrator }
     }
