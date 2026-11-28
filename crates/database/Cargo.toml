@@ -25,7 +25,7 @@ features = ["sqlx-postgres", "with-uuid"]
 workspace = true
 
 [dependencies.serde_with]
-version = "3.24.0"
+version = "3.25.0"
 
 [dependencies.sqlx]
 version = "0.9.0"
